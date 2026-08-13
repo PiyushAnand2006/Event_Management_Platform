@@ -1,0 +1,438 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// === NextAuth Models ===
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// === User Model ===
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  emailVerified DateTime?
+  passwordHash  String    @map("password")
+  image         String?
+  phone         String?
+  role          String    @default("customer") // customer, organizer, admin, attendee
+  isBlocked     Boolean   @default(false)
+  points        Int       @default(0)
+  interests     String    @default("[]") // JSON array stored as string
+  bio           String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  organizedEvents  Event[]  @relation("Organizer")
+  coOrganizedEvents CoOrganizer[]
+  registrations   Registration[]
+  reviews         Review[]
+  bookmarks       Bookmark[]
+  receivedNotifications Notification[]
+  pollResponses    PollResponse[]
+  qnaQuestions     QnAQuestion[]
+  uploadedPhotos   Photo[]
+
+  @@map("users")
+}
+
+// === Event Model ===
+model Event {
+  id              String    @id @default(cuid())
+  title           String
+  description     String
+  type            String    @default("conference") // conference, seminar, hackathon, wedding, private_ceremony, other
+  category        String
+  date            DateTime
+  endTime         DateTime?
+  location        String
+  coordinates     String?   // JSON {lat, lng} for vendor lookup
+  capacity        Int       @default(0)  // 0 = unlimited
+  registeredCount Int       @default(0)
+  organizerId     String
+  posterUrl       String?
+  status          String    @default("pending") // pending, approved, rejected, published
+  tags            String    @default("[]") // JSON array
+  averageRating   Float     @default(0)
+  price           Float     @default(0)
+  isFree          Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  organizer       User      @relation("Organizer", fields: [organizerId], references: [id])
+  coOrganizers    CoOrganizer[]
+  registrations   Registration[]
+  reviews         Review[]
+  bookmarks       Bookmark[]
+  venue           Venue?
+  stalls          FoodStall[]
+  polls           Poll[]
+  qnaQuestions    QnAQuestion[]
+  photos          Photo[]
+  backupVendors   BackupVendor[]
+  invitations     Invitation[]
+
+  @@map("events")
+}
+
+// === Registration Model ===
+model Registration {
+  id              String    @id @default(cuid())
+  userId          String
+  eventId         String
+  status          String    @default("registered") // registered, waitlisted, attended, cancelled
+  tier            String    @default("general") // vip, reserved, general
+  groupId         String?   // For group seating (e.g., "bride_family")
+  seatId          String?
+  qrCodeDataUrl   String?
+  paymentId       String?
+  orderId         String?
+  paymentStatus   String    @default("not_applicable") // pending, paid, failed, refunded, not_applicable
+  refundedAt      DateTime?
+  refundId        String?
+  refundStatus    String    @default("not_applicable") // pending, processed, failed, not_applicable
+  refundAmount    Float     @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  user            User      @relation(fields: [userId], references: [id])
+  event           Event     @relation(fields: [eventId], references: [id])
+  seat            Seat?     @relation("SeatAssignment")
+  invitation      Invitation?
+
+  @@unique([userId, eventId])
+  @@index([eventId, status])
+  @@map("registrations")
+}
+
+// === Review Model ===
+model Review {
+  id        String   @id @default(cuid())
+  rating    Int
+  comment   String?
+  userId    String
+  eventId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id])
+  event     Event    @relation(fields: [eventId], references: [id])
+
+  @@unique([userId, eventId])
+  @@map("reviews")
+}
+
+// === Bookmark Model ===
+model Bookmark {
+  id        String   @id @default(cuid())
+  userId    String
+  eventId   String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id])
+  event     Event    @relation(fields: [eventId], references: [id])
+
+  @@unique([userId, eventId])
+  @@map("bookmarks")
+}
+
+// === CoOrganizer Model ===
+model CoOrganizer {
+  id        String   @id @default(cuid())
+  eventId   String
+  userId    String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id])
+  event     Event    @relation(fields: [eventId], references: [id])
+
+  @@unique([eventId, userId])
+  @@map("co_organizers")
+}
+
+// === Notification Model ===
+model Notification {
+  id          String   @id @default(cuid())
+  userId      String
+  type        String   // registration_confirmed, checkin_success, seat_assigned, vendor_declined, vendor_fallback_ready, qna_answered, photo_rejected, event_reminder, event_approved, event_rejected, waitlist_promoted
+  title       String
+  message     String
+  data        String?  // JSON payload for navigation
+  isRead      Boolean  @default(false)
+  expiresAt   DateTime // TTL: default 30 days from now
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@index([userId, isRead, createdAt])
+  @@map("notifications")
+}
+
+// === Venue Model ===
+model Venue {
+  id          String   @id @default(cuid())
+  name        String
+  eventId     String   @unique
+  coordinates String? // JSON {lat, lng} for vendor lookup
+  width       Float    @default(100)  // Floor plan width in abstract units
+  height      Float    @default(100)  // Floor plan height
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  sections    VenueSection[]
+  seats       Seat[]
+  pois        POI[]
+
+  @@map("venues")
+}
+
+// === VenueSection Model ===
+model VenueSection {
+  id        String   @id @default(cuid())
+  venueId   String
+  name      String   // e.g., "Stage-Front", "Balcony", "Table 3"
+  shape     String   @default("rectangle") // rectangle, circle, custom
+  preset    String?  // theatre, round_table, classroom, banquet, custom
+  positionX Float    @default(0)
+  positionY Float    @default(0)
+  width     Float    @default(20)
+  height    Float    @default(20)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  venue     Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  seats     Seat[]
+
+  @@map("venue_sections")
+}
+
+// === Seat Model ===
+model Seat {
+  id              String   @id @default(cuid())
+  venueId         String
+  sectionId       String
+  label           String   // e.g., "A12", "T3-5"
+  positionX       Float    // 2D/3D X coordinate
+  positionY       Float    // 2D/3D Y coordinate
+  positionZ       Float    @default(0) // 3D Z coordinate (for elevation tiers)
+  rotation        Float    @default(0) // Rotation angle in degrees
+  tier            String   @default("general") // vip, reserved, general
+  status          String   @default("unoccupied") // unoccupied, occupied, blocked
+  assignedGuestId String?  @unique // Registration ID
+  groupId         String?  // For group seating constraint
+  isLocked        Boolean  @default(false) // Prevents auto-assignment from changing this seat
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  venue           Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  section         VenueSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  assignedGuest   Registration? @relation("SeatAssignment", fields: [assignedGuestId], references: [id])
+
+  @@unique([venueId, label])
+  @@index([venueId, status])
+  @@index([sectionId])
+  @@map("seats")
+}
+
+// === POI Model ===
+model POI {
+  id        String   @id @default(cuid())
+  venueId   String
+  type      String   // food_stall, restroom, entrance, stage, seating_section, other
+  name      String
+  positionX Float
+  positionY Float
+  refId     String?  // Optional FK to FoodStall or Section
+  icon      String   @default("map-pin") // Lucide icon name
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  venue     Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  @@map("pois")
+}
+
+// === Invitation Model ===
+model Invitation {
+  id           String    @id @default(cuid())
+  registrationId String   @unique
+  eventId      String
+  token        String    // Signed JWT string
+  barcodeUrl   String?   // Code128 barcode image URL
+  qrUrl        String?   // QR code image URL
+  status       String    @default("issued") // issued, sent, opened, checked_in, revoked
+  sentAt       DateTime?
+  checkedInAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  registration Registration @relation(fields: [registrationId], references: [id])
+  event        Event @relation(fields: [eventId], references: [id])
+
+  @@map("invitations")
+}
+
+// === FoodStall Model ===
+model FoodStall {
+  id             String   @id @default(cuid())
+  eventId        String
+  ownerName      String
+  phone          String
+  stallType      String   // food, beverage, dessert, decor, photography, other
+  cuisineType     String?
+  contractStatus String   @default("pending") // pending, confirmed, declined, cancelled
+  locationX      Float?
+  locationY      Float?
+  notes          String?
+  photoUrl       String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  event          Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  backupVendors  BackupVendor[]
+  promotedFrom  BackupVendor? @relation("BackupPromotion")
+
+  @@index([eventId, contractStatus])
+  @@map("food_stalls")
+}
+
+// === BackupVendor Model ===
+model BackupVendor {
+  id              String   @id @default(cuid())
+  eventId         String
+  triggeringStallId String
+  name            String
+  phone           String?
+  address         String?
+  distanceKm      Float
+  source          String   @default("overpass") // overpass, google, manual
+  contactStatus   String   @default("unverified") // unverified, contacted, confirmed
+  promotedToStallId String?  @unique
+  createdAt        DateTime @default(now())
+
+  event            Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  triggeringStall   FoodStall @relation(fields: [triggeringStallId], references: [id])
+  promotedToStall  FoodStall? @relation("BackupPromotion", fields: [promotedToStallId], references: [id])
+
+  @@map("backup_vendors")
+}
+
+// === Poll Model ===
+model Poll {
+  id          String   @id @default(cuid())
+  eventId     String
+  question    String
+  options     String   // JSON [{text, votes}]
+  allowMultiple Boolean @default(false)
+  isLive      Boolean  @default(true)
+  closesAt    DateTime?
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  event       Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  responses   PollResponse[]
+
+  @@map("polls")
+}
+
+// === PollResponse Model ===
+model PollResponse {
+  id             String   @id @default(cuid())
+  pollId         String
+  userId         String
+  selectedOptions String  // JSON [0, 2, 3] indices of selected options
+  createdAt      DateTime @default(now())
+
+  poll           Poll     @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  user           User     @relation(fields: [userId], references: [id])
+
+  @@unique([pollId, userId])
+  @@map("poll_responses")
+}
+
+// === QnAQuestion Model ===
+model QnAQuestion {
+  id         String   @id @default(cuid())
+  eventId    String
+  askedBy    String
+  text       String
+  upvotes    Int      @default(0)
+  upvotedBy  String   @default("[]") // JSON [userId, ...]
+  isApproved Boolean  @default(false)
+  isAnswered Boolean  @default(false)
+  answerText String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  event      Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user       User  @relation(fields: [askedBy], references: [id])
+
+  @@map("qna_questions")
+}
+
+// === Photo Model ===
+model Photo {
+  id              String   @id @default(cuid())
+  eventId         String
+  uploadedBy      String
+  url             String
+  caption         String?
+  status          String   @default("pending") // pending, approved, rejected
+  moderatedBy     String?
+  rejectionReason String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  event           Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user            User  @relation(fields: [uploadedBy], references: [id])
+
+  @@index([eventId, status])
+  @@map("photos")
+}
