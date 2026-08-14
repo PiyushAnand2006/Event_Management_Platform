@@ -35,7 +35,11 @@ export async function GET(request: Request) {
     }
 
     if (q) {
-      where.title = { contains: q, mode: 'insensitive' }
+      where.OR = [
+        { title: { contains: q } },
+        { description: { contains: q } },
+        { location: { contains: q } },
+      ]
     }
     if (type) {
       where.type = type
@@ -108,7 +112,20 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { title, description, category, date, location, type, endTime, capacity, price, tags, coordinates } = body
+    const {
+      title,
+      description,
+      category,
+      date,
+      location,
+      type,
+      endTime,
+      capacity,
+      price,
+      tags,
+      coordinates,
+      posterUrl,
+    } = body
 
     if (!title?.trim()) return errorResponse('Title is required', 400)
     if (!description?.trim()) return errorResponse('Description is required', 400)
@@ -122,20 +139,41 @@ export async function POST(request: Request) {
     const eventPrice = Math.max(0, parseFloat(price) || 0)
     const eventCapacity = Math.max(0, parseInt(capacity, 10) || 0)
 
+    // Safely parse start date
+    const startDate = new Date(date)
+    if (isNaN(startDate.getTime())) {
+      return errorResponse('Invalid event start date', 400)
+    }
+
+    // Safely parse end time
+    let parsedEndTime: Date | null = null
+    if (endTime) {
+      if (typeof endTime === 'string' && endTime.includes(':') && !endTime.includes('-')) {
+        const dateStr = startDate.toISOString().split('T')[0]
+        parsedEndTime = new Date(`${dateStr}T${endTime}`)
+      } else {
+        parsedEndTime = new Date(endTime)
+      }
+      if (isNaN(parsedEndTime.getTime())) {
+        parsedEndTime = null
+      }
+    }
+
     const event = await db.event.create({
       data: {
         title: title.trim(),
         description: description.trim(),
         type: eventType,
         category: category.trim(),
-        date: new Date(date),
-        endTime: endTime ? new Date(endTime) : null,
+        date: startDate,
+        endTime: parsedEndTime,
         location: location.trim(),
         coordinates: coordinates ? JSON.stringify(coordinates) : null,
         capacity: eventCapacity,
         registeredCount: 0,
         organizerId: user.id,
-        status: 'pending',
+        posterUrl: posterUrl || null,
+        status: 'published',
         tags: toJsonField(tags || []),
         price: eventPrice,
         isFree: eventPrice === 0,

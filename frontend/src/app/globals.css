@@ -176,3 +176,29 @@
   background-image: radial-gradient(oklch(0.96 0.008 60 / 0.8) 1px, transparent 1px);
   background-size: 24px 24px;
 }
+
+/* Tactile shadow and utility classes */
+.soft-shadow {
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.07);
+}
+
+.dark .soft-shadow {
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.4);
+}
+
+.soft-shadow-lg {
+  box-shadow: 0 20px 50px -15px rgba(0, 0, 0, 0.12);
+}
+
+.dark .soft-shadow-lg {
+  box-shadow: 0 20px 50px -15px rgba(0, 0, 0, 0.5);
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

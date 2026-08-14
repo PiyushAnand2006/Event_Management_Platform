@@ -104,7 +104,16 @@ export default function OrganizerGuestsPage() {
       if (searchQuery) params.set('search', searchQuery)
       const res = await fetch(`/api/events/${eventId}/invitations?${params.toString()}`)
       if (!res.ok) throw new Error('Failed to fetch invitations')
-      return res.json()
+      const data = await res.json()
+      return Array.isArray(data.data?.invitations)
+        ? data.data.invitations
+        : Array.isArray(data.invitations)
+        ? data.invitations
+        : Array.isArray(data.data)
+        ? data.data
+        : Array.isArray(data)
+        ? data
+        : []
     },
     enabled: !!eventId,
   })
@@ -237,7 +246,11 @@ export default function OrganizerGuestsPage() {
                     <Icon className={cn('h-4 w-4', stat.color)} />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold">{loadingStats ? <Skeleton className="h-7 w-10" /> : stat.value}</p>
+                    {loadingStats ? (
+                      <Skeleton className="h-7 w-10" />
+                    ) : (
+                      <p className="text-2xl font-bold">{stat.value}</p>
+                    )}
                     <p className="text-xs text-muted-foreground">{stat.label}</p>
                   </div>
                 </div>

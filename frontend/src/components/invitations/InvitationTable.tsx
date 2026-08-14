@@ -53,7 +53,7 @@ const STATUS_STYLES: Record<string, string> = {
 const PAGE_SIZE = 10
 
 export default function InvitationTable({
-  invitations,
+  invitations: rawInvitations,
   onResend,
   onRevoke,
   loading = false,
@@ -61,7 +61,17 @@ export default function InvitationTable({
   const [page, setPage] = useState(0)
   const [revokeId, setRevokeId] = useState<string | null>(null)
 
-  const totalPages = Math.ceil(invitations.length / PAGE_SIZE)
+  const invitations = Array.isArray(rawInvitations)
+    ? rawInvitations
+    : Array.isArray((rawInvitations as any)?.invitations)
+    ? (rawInvitations as any).invitations
+    : Array.isArray((rawInvitations as any)?.data?.invitations)
+    ? (rawInvitations as any).data.invitations
+    : Array.isArray((rawInvitations as any)?.data)
+    ? (rawInvitations as any).data
+    : []
+
+  const totalPages = Math.max(1, Math.ceil(invitations.length / PAGE_SIZE))
   const paged = invitations.slice(
     page * PAGE_SIZE,
     (page + 1) * PAGE_SIZE

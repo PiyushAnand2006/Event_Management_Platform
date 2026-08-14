@@ -1,158 +1,161 @@
 'use client'
 
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { ArrowRight, Sparkles, CalendarDays } from 'lucide-react'
+import { Search, MapPin, Sparkles, ArrowRight, Compass, Users, Calendar } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.15, delayChildren: 0.2 },
-  },
-}
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 30 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] },
-  },
-}
-
-const floatingOrb = (size: string, color: string, x: string, y: string, delay: number) => ({
-  className: `absolute ${size} rounded-full ${color} blur-3xl pointer-events-none`,
-  style: { left: x, top: y },
-  animate: {
-    y: [0, -30, 0, 20, 0],
-    x: [0, 15, -10, 5, 0],
-    scale: [1, 1.1, 0.95, 1.05, 1],
-  },
-  transition: {
-    duration: 12,
-    repeat: Infinity,
-    ease: 'easeInOut',
-    delay,
-  },
-})
+const trendingTags = [
+  { label: 'Technology', query: 'Technology' },
+  { label: 'AI & Data', query: 'AI' },
+  { label: 'Workshops', query: 'Education' },
+  { label: 'Social & Meetups', query: 'Social' },
+  { label: 'Hackathons', query: 'hackathon' },
+]
 
 export function HeroSection() {
+  const router = useRouter()
+  const [query, setQuery] = useState('')
+  const [location, setLocation] = useState('Bangalore, IN')
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    const sp = new URLSearchParams()
+    if (query.trim()) sp.set('q', query.trim())
+    if (location.trim()) sp.set('location', location.trim())
+    router.push(`/events?${sp.toString()}`)
+  }
+
+  const handleTagClick = (tagQuery: string) => {
+    router.push(`/events?category=${encodeURIComponent(tagQuery)}`)
+  }
+
   return (
-    <section className="relative overflow-hidden">
-      {/* Dark gradient background */}
-      <div className="absolute inset-0 -z-10 hero-gradient" />
+    <section className="relative overflow-hidden pt-12 pb-24 lg:pt-20 lg:pb-32 bg-gradient-to-b from-primary/10 via-amber-500/5 to-background">
+      {/* Warm ambient radial glows */}
+      <div className="absolute top-10 left-1/4 -z-10 h-72 w-72 rounded-full bg-amber-400/20 blur-3xl pointer-events-none" />
+      <div className="absolute bottom-10 right-1/4 -z-10 h-80 w-80 rounded-full bg-primary/15 blur-3xl pointer-events-none" />
+      <div className="absolute top-1/2 left-10 -z-10 h-48 w-48 rounded-full bg-purple-500/10 blur-3xl pointer-events-none" />
 
-      {/* Mesh pattern overlay for visual depth */}
-      <div className="absolute inset-0 -z-[9] mesh-pattern" />
-
-      {/* Dot pattern overlay for texture */}
-      <div className="absolute inset-0 -z-[8] dot-pattern opacity-[0.06]" />
-
-      {/* Animated floating orbs */}
-      <motion.div {...floatingOrb('h-[400px] w-[400px]', 'bg-orange-500/15', '10%', '10%', 0)} />
-      <motion.div {...floatingOrb('h-[300px] w-[300px]', 'bg-amber-400/10', '70%', '5%', 2)} />
-      <motion.div {...floatingOrb('h-[350px] w-[350px]', 'bg-orange-700/10', '60%', '60%', 4)} />
-      <motion.div {...floatingOrb('h-[250px] w-[250px]', 'bg-amber-600/8', '5%', '70%', 1)} />
-      <motion.div {...floatingOrb('h-[200px] w-[200px]', 'bg-orange-400/6', '85%', '75%', 3)} />
-
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className="relative mx-auto flex min-h-[calc(100vh-4rem)] max-w-7xl flex-col items-center justify-center px-4 py-24 text-center sm:px-6 lg:px-8"
-      >
+      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 text-center">
         {/* Badge */}
-        <motion.div variants={itemVariants}>
-          <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-orange-500/30 bg-orange-500/10 px-4 py-1.5 text-sm font-medium text-orange-300">
-            <Sparkles className="h-3.5 w-3.5" />
-            <span>Now with AI-powered event planning</span>
-          </div>
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-xs sm:text-sm font-semibold text-primary mb-6 shadow-xs"
+        >
+          <Sparkles className="h-3.5 w-3.5" />
+          <span>The Next-Gen Community & Event Platform</span>
         </motion.div>
 
-        {/* Heading */}
+        {/* Hero Title */}
         <motion.h1
-          variants={itemVariants}
-          className="max-w-4xl text-5xl font-bold tracking-tight sm:text-6xl md:text-6xl lg:text-7xl"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+          className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight text-foreground leading-[1.1]"
         >
-          <span className="text-white">Your Events, </span>
-          <span className="bg-gradient-to-r from-orange-400 to-amber-300 bg-clip-text text-transparent">
-            Elevated
+          The people platform — <br className="hidden sm:block" />
+          <span className="bg-gradient-to-r from-primary via-orange-500 to-amber-500 bg-clip-text text-transparent">
+            Where interests become friendships
           </span>
         </motion.h1>
 
         {/* Subtitle */}
         <motion.p
-          variants={itemVariants}
-          className="mt-6 max-w-2xl text-lg text-orange-100/60 sm:text-xl leading-relaxed"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="mt-6 max-w-2xl mx-auto text-base sm:text-lg md:text-xl text-muted-foreground leading-relaxed font-normal"
         >
-          From intimate ceremonies to grand conferences, Occasio gives you the
-          tools to plan, manage, and deliver events that leave lasting impressions.
+          Join a local group to meet people, try something new, or do more of what you love. From tech meetups to weekend adventures, find your circle.
         </motion.p>
 
-        {/* CTA Buttons */}
+        {/* Interactive Dual Search Pill */}
         <motion.div
-          variants={itemVariants}
-          className="mt-10 flex flex-col gap-4 sm:flex-row"
+          initial={{ opacity: 0, y: 25 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.3 }}
+          className="mt-10 max-w-3xl mx-auto"
         >
-          <Button
-            size="lg"
-            className="bg-orange-600 hover:bg-orange-500 text-white h-12 px-8 text-base font-semibold shadow-lg shadow-orange-600/30 hover:shadow-orange-500/40 transition-all"
-            asChild
+          <form
+            onSubmit={handleSearch}
+            className="glass-card p-2 sm:p-2.5 rounded-3xl sm:rounded-full flex flex-col sm:flex-row gap-2 items-center w-full soft-shadow border border-border/80"
           >
-            <Link href="/signup">
-              Get started free
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
-          <Button
-            size="lg"
-            className="h-12 px-8 text-base font-semibold bg-white/10 backdrop-blur border border-white/20 text-white hover:bg-white/20 hover:text-white transition-all"
-            asChild
-          >
-            <Link href="/events">
-              <CalendarDays className="mr-2 h-4 w-4" />
-              Browse Events
-            </Link>
-          </Button>
+            {/* Keyword Input */}
+            <div className="flex-1 flex items-center bg-background/90 dark:bg-card px-4 py-3 rounded-full w-full border border-border/40 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+              <Search className="h-5 w-5 text-primary mr-3 shrink-0" />
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search for 'hiking', 'tech', 'coding'..."
+                className="bg-transparent border-none focus:outline-hidden text-sm sm:text-base text-foreground placeholder:text-muted-foreground/70 w-full"
+              />
+            </div>
+
+            {/* Location Input */}
+            <div className="flex-1 flex items-center bg-background/90 dark:bg-card px-4 py-3 rounded-full w-full border border-border/40 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+              <MapPin className="h-5 w-5 text-amber-500 mr-3 shrink-0" />
+              <input
+                type="text"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder="City or location"
+                className="bg-transparent border-none focus:outline-hidden text-sm sm:text-base text-foreground placeholder:text-muted-foreground/70 w-full"
+              />
+            </div>
+
+            {/* Search CTA Button */}
+            <Button
+              type="submit"
+              className="w-full sm:w-auto rounded-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-8 py-6 text-base shadow-md transition-all active:scale-95 shrink-0"
+            >
+              <span>Search</span>
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </Button>
+          </form>
+
+          {/* Quick Trending Tags */}
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-2 text-xs sm:text-sm text-muted-foreground">
+            <span className="font-medium text-foreground/80 mr-1">Trending:</span>
+            {trendingTags.map((tag) => (
+              <button
+                key={tag.label}
+                type="button"
+                onClick={() => handleTagClick(tag.query)}
+                className="rounded-full bg-secondary/80 hover:bg-primary/10 hover:text-primary px-3.5 py-1 text-xs font-medium border border-border/60 transition-colors cursor-pointer"
+              >
+                {tag.label}
+              </button>
+            ))}
+          </div>
         </motion.div>
 
-        {/* Social proof */}
+        {/* Community Trust Stats */}
         <motion.div
-          variants={itemVariants}
-          className="mt-16 flex flex-col items-center gap-4 sm:flex-row"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.8, delay: 0.45 }}
+          className="mt-14 pt-8 border-t border-border/40 grid grid-cols-3 gap-4 max-w-xl mx-auto"
         >
-          <div className="flex -space-x-3">
-            {['bg-orange-500', 'bg-amber-500', 'bg-orange-700', 'bg-amber-600'].map(
-              (color, i) => (
-                <div
-                  key={i}
-                  className={`h-10 w-10 rounded-full ${color} border-2 border-[oklch(0.18_0.03_30)] flex items-center justify-center text-white text-xs font-bold`}
-                >
-                  {String.fromCharCode(65 + i)}
-                </div>
-              )
-            )}
+          <div className="flex flex-col items-center">
+            <span className="text-xl sm:text-2xl font-bold text-foreground">2,500+</span>
+            <span className="text-xs text-muted-foreground mt-0.5">Events Hosted</span>
           </div>
-          <div className="text-center sm:text-left">
-            <div className="flex items-center gap-1">
-              {[...Array(5)].map((_, i) => (
-                <svg
-                  key={i}
-                  className="h-4 w-4 text-orange-400 fill-orange-400"
-                  viewBox="0 0 20 20"
-                >
-                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                </svg>
-              ))}
-            </div>
-            <p className="mt-1 text-sm text-orange-200/50">
-              Trusted by <span className="font-semibold text-orange-100">2,500+</span> event organizers worldwide
-            </p>
+          <div className="flex flex-col items-center border-x border-border/50">
+            <span className="text-xl sm:text-2xl font-bold text-primary">45,000+</span>
+            <span className="text-xs text-muted-foreground mt-0.5">Active Members</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <span className="text-xl sm:text-2xl font-bold text-foreground">99.8%</span>
+            <span className="text-xs text-muted-foreground mt-0.5">Satisfaction</span>
           </div>
         </motion.div>
-      </motion.div>
+      </div>
     </section>
   )
 }

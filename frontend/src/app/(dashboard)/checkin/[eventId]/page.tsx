@@ -1,26 +1,26 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, Suspense } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import dynamic from 'next/dynamic'
-import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowLeft,
   ScanLine,
   UserCheck,
-  UserX,
   Users,
   Loader2,
   CameraOff,
-  CheckCircle2,
-  XCircle,
   Wifi,
+  RotateCw,
+  QrCode,
+  Search,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
@@ -33,7 +33,7 @@ const CheckInScanner = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground">
+      <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground py-16">
         <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
         <p className="text-sm">Loading scanner…</p>
       </div>
@@ -67,6 +67,7 @@ export default function CheckinPage() {
   const [lastResult, setLastResult] = useState<CheckInResultData | null>(null)
   const [scannerError, setScannerError] = useState<boolean>(false)
   const [loadingStats, setLoadingStats] = useState(true)
+  const [simulatedCode, setSimulatedCode] = useState('')
 
   const fetchStats = useCallback(async () => {
     try {
@@ -149,6 +150,13 @@ export default function CheckinPage() {
     [eventId, toast, fetchStats]
   )
 
+  const handleSimulatedSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!simulatedCode.trim()) return
+    handleScanResult(simulatedCode.trim())
+    setSimulatedCode('')
+  }
+
   if (authStatus === 'loading') {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -163,13 +171,13 @@ export default function CheckinPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4 -m-4 sm:-m-6 lg:-m-8">
+    <div className="flex flex-col gap-4">
       {/* Top Bar */}
-      <div className="flex items-center gap-3 bg-background border-b px-4 py-3 sticky top-0 z-10">
+      <div className="flex items-center gap-3 bg-card rounded-xl border border-border/70 p-3 shadow-xs sticky top-0 z-10">
         <Button
           variant="ghost"
           size="icon"
-          className="h-9 w-9 shrink-0"
+          className="h-9 w-9 shrink-0 cursor-pointer"
           onClick={() => router.back()}
         >
           <ArrowLeft className="h-5 w-5" />
@@ -177,7 +185,7 @@ export default function CheckinPage() {
 
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <ScanLine className="h-5 w-5 text-orange-600 shrink-0" />
-          <h1 className="text-base sm:text-lg font-semibold truncate">{eventName}</h1>
+          <h1 className="text-base sm:text-lg font-semibold truncate text-foreground">{eventName}</h1>
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
@@ -200,25 +208,63 @@ export default function CheckinPage() {
       </div>
 
       {/* Two-Panel Layout */}
-      <div className="flex flex-col lg:flex-row gap-4 flex-1">
-        {/* Left/Main Panel: Scanner */}
-        <div className="flex-1 min-h-0">
-          <Card className="h-full overflow-hidden border-2 border-dashed border-orange-200 dark:border-orange-800">
-            <CardContent className="p-0 h-full min-h-[400px] lg:min-h-[500px] relative">
+      <div className="flex flex-col lg:flex-row gap-6 flex-1">
+        {/* Left/Main Panel: Scanner or Camera Unavailable Simulation */}
+        <div className="flex-1 min-h-[450px]">
+          <Card className="h-full overflow-hidden border-2 border-dashed border-orange-200 dark:border-orange-900/50 flex flex-col justify-center">
+            <CardContent className="p-6 h-full min-h-[400px] flex flex-col justify-center relative">
               {scannerError ? (
-                <div className="flex flex-col items-center justify-center h-full gap-4 text-muted-foreground p-6">
-                  <div className="rounded-full bg-red-100 dark:bg-red-900/30 p-4">
+                <div className="flex flex-col items-center justify-center h-full gap-5 text-muted-foreground max-w-md mx-auto py-8">
+                  <div className="rounded-full bg-red-100 dark:bg-red-950/40 p-5">
                     <CameraOff className="h-10 w-10 text-red-500" />
                   </div>
-                  <div className="text-center space-y-1">
-                    <p className="font-medium text-foreground">Camera Not Available</p>
-                    <p className="text-sm">Please allow camera access or use the manual search panel.</p>
+
+                  <div className="text-center space-y-1.5">
+                    <h3 className="text-lg font-bold text-foreground">Camera Not Available</h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      Camera permissions are disabled or no webcam is detected. You can use the search panel or enter a QR payload below to check in guests.
+                    </p>
+                  </div>
+
+                  {/* QR Code Simulation Bar */}
+                  <form onSubmit={handleSimulatedSubmit} className="w-full space-y-2 mt-2">
+                    <div className="flex items-center gap-2">
+                      <div className="relative flex-1">
+                        <QrCode className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Paste or type QR barcode payload..."
+                          value={simulatedCode}
+                          onChange={(e) => setSimulatedCode(e.target.value)}
+                          className="pl-9 text-sm"
+                        />
+                      </div>
+                      <Button
+                        type="submit"
+                        disabled={!simulatedCode.trim()}
+                        className="bg-orange-600 hover:bg-orange-700 text-white font-semibold cursor-pointer shrink-0"
+                      >
+                        Check In
+                      </Button>
+                    </div>
+                  </form>
+
+                  {/* Action Buttons */}
+                  <div className="flex items-center gap-3 pt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setScannerError(false)}
+                      className="rounded-full cursor-pointer"
+                    >
+                      <RotateCw className="mr-1.5 h-3.5 w-3.5" />
+                      Retry Camera
+                    </Button>
                   </div>
                 </div>
               ) : (
                 <Suspense
                   fallback={
-                    <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground">
+                    <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground py-16">
                       <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
                       <p className="text-sm">Initializing scanner…</p>
                     </div>
@@ -239,7 +285,7 @@ export default function CheckinPage() {
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -10, scale: 0.95 }}
                     transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-                    className="absolute bottom-4 left-4 right-4 sm:left-6 sm:right-6"
+                    className="absolute bottom-4 left-4 right-4 sm:left-6 sm:right-6 z-20"
                   >
                     <CheckInResult result={lastResult} onDismiss={() => setLastResult(null)} />
                   </motion.div>
@@ -254,7 +300,7 @@ export default function CheckinPage() {
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
-                <Users className="h-4 w-4 text-orange-600" />
+                <Search className="h-4 w-4 text-orange-600" />
                 Manual Search
               </CardTitle>
             </CardHeader>
@@ -274,20 +320,6 @@ export default function CheckinPage() {
               <CheckInStatsPanel stats={stats} loading={loadingStats} />
             </CardContent>
           </Card>
-
-          {/* Recent Result Card (Mobile-friendly) */}
-          <AnimatePresence>
-            {lastResult && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="lg:hidden"
-              >
-                <CheckInResult result={lastResult} onDismiss={() => setLastResult(null)} />
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
       </div>
     </div>

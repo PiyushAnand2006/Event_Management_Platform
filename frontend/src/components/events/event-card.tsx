@@ -13,6 +13,8 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { cn } from '@/lib/utils'
 
+import { AbstractAiBanner } from '@/components/events/abstract-ai-banner'
+
 export interface EventCardData {
   id: string
   title: string
@@ -66,18 +68,20 @@ export function EventCard({ event }: EventCardProps) {
     >
       <Link href={`/events/${event.id}`} className="block group">
         <div className="bg-card rounded-xl border border-border/60 overflow-hidden shadow-sm hover:shadow-lg transition-shadow duration-300 h-full flex flex-col">
-          {/* Poster / Placeholder */}
+          {/* Poster / AI Abstract Banner */}
           <div className="relative aspect-[16/10] overflow-hidden">
-            {event.posterUrl ? (
+            {event.posterUrl && !event.posterUrl.includes('unsplash') ? (
               <img
                 src={event.posterUrl}
                 alt={event.title}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
               />
             ) : (
-              <div className="w-full h-full bg-gradient-to-br from-orange-500 via-orange-600 to-amber-800 flex items-center justify-center">
-                <CalendarDays className="h-16 w-16 text-white/30" />
-              </div>
+              <AbstractAiBanner
+                title={event.title}
+                category={event.category}
+                type={event.type}
+              />
             )}
             {/* Type Badge */}
             <div className="absolute top-3 left-3 flex gap-2">

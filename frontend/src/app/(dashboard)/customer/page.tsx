@@ -93,7 +93,13 @@ export default function CustomerDashboardPage() {
       const res = await fetch('/api/events?registered=true')
       if (!res.ok) throw new Error('Failed to fetch registrations')
       const data = await res.json()
-      return data.events || data || []
+      return Array.isArray(data.data?.events)
+        ? data.data.events
+        : Array.isArray(data.events)
+        ? data.events
+        : Array.isArray(data)
+        ? data
+        : []
     },
   })
 

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Sparkles, ArrowRight, Twitter, Github, Linkedin, Instagram } from 'lucide-react'
+import { Sparkles, ArrowRight, Twitter, Github, Linkedin, Instagram, Heart } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -15,15 +15,23 @@ import {
 import { toast } from 'sonner'
 
 const platformLinks = [
-  { label: 'Events', href: '/#events' },
-  { label: 'Pricing', href: '/pricing' },
-  { label: 'Features', href: '/features' },
+  { label: 'Find Events', href: '/events' },
+  { label: 'Start an Event', href: '/signup' },
+  { label: 'Features & Tools', href: '/features' },
+  { label: 'Pricing Plans', href: '/pricing' },
+]
+
+const categories = [
+  { label: 'Technology & AI', href: '/events?category=Technology' },
+  { label: 'Workshops & Education', href: '/events?category=Education' },
+  { label: 'Social & Networking', href: '/events?category=Social' },
+  { label: 'Hackathons', href: '/events?type=hackathon' },
 ]
 
 const companyLinks = [
-  { label: 'About', href: '/about' },
-  { label: 'Contact', href: '/contact' },
-  { label: 'Support', href: '/support' },
+  { label: 'About Occasio', href: '/about' },
+  { label: 'Contact Us', href: '/contact' },
+  { label: 'Help & Support', href: '/support' },
 ]
 
 const socialLinks = [
@@ -37,17 +45,17 @@ const legalItems = [
   {
     label: 'Terms of Service',
     content:
-      'These Terms of Service ("Terms") govern your access to and use of the Occasio platform, including our website, mobile applications, and all related services (collectively, the "Service"). By accessing or using the Service, you agree to be bound by these Terms. If you do not agree to these Terms, you may not access or use the Service. We reserve the right to update or modify these Terms at any time without prior notice. Your continued use of the Service after any such changes constitutes your acceptance of the new Terms. Occasio provides tools for event management and ceremony planning. Users are responsible for the content they create and share through the platform.',
+      'These Terms of Service ("Terms") govern your access to and use of the Occasio platform, including our website, mobile applications, and all related services. By accessing or using the Service, you agree to be bound by these Terms. Occasio provides tools for event management, community gatherings, digital ticketing, venue layout designing, and real-time live event engagement. Users are responsible for the content and gatherings they organize through the platform.',
   },
   {
     label: 'Privacy Policy',
     content:
-      'At Occasio, we take your privacy seriously. This Privacy Policy describes how we collect, use, and protect your personal information when you use our Service. We collect information you provide directly (name, email, event details) and automatically (usage data, device info, cookies). We use this information to provide and improve the Service, communicate with you, and ensure platform security. We do not sell your personal data to third parties. You may access, update, or delete your personal information at any time through your account settings or by contacting our support team.',
+      'At Occasio, we take your privacy seriously. This Privacy Policy describes how we collect, use, and protect your personal information when you use our Service. We collect information you provide directly (name, email, event details) and automatically (usage data, device info, cookies). We do not sell your personal data to third parties. You may access, update, or delete your personal information at any time through your account settings.',
   },
   {
-    label: 'Cookie Policy',
+    label: 'Community Guidelines',
     content:
-      'Occasio uses cookies and similar tracking technologies to enhance your experience on our platform. Essential cookies are required for the Service to function properly, including session management and security features. Analytics cookies help us understand how users interact with our platform so we can improve the experience. Preference cookies remember your settings and preferences. You can manage your cookie preferences through your browser settings at any time. Please note that disabling certain cookies may affect the functionality of the Service.',
+      'Occasio is dedicated to providing a safe, inclusive, and welcoming community for all attendees, organizers, and partners. We expect all participants to uphold respect, transparency, and safety across all in-person and online events organized on the platform.',
   },
 ]
 
@@ -67,9 +75,9 @@ function LegalModal({
       <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>Last updated: January 2025</DialogDescription>
+          <DialogDescription>Occasio Community Guidelines & Policies</DialogDescription>
         </DialogHeader>
-        <p className="text-sm text-muted-foreground leading-relaxed">{content}</p>
+        <p className="text-sm text-muted-foreground leading-relaxed mt-2">{content}</p>
       </DialogContent>
     </Dialog>
   )
@@ -83,38 +91,39 @@ export function Footer() {
 
   const handleNewsletter = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!email) return
+    if (!email.trim()) return
     toast.success('Subscribed!', { description: `We'll send updates to ${email}` })
     setEmail('')
   }
 
   return (
-    <footer className="border-t bg-muted/30">
+    <footer className="border-t border-border/60 bg-secondary/30 dark:bg-card/40 transition-colors">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 gap-8 py-12 sm:grid-cols-2 lg:grid-cols-4">
-          {/* Company Info */}
-          <div className="sm:col-span-2 lg:col-span-1">
-            <Link href="/" className="flex items-center gap-2 group">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-orange-600 text-white transition-transform group-hover:scale-110">
+        <div className="grid grid-cols-1 gap-10 py-16 sm:grid-cols-2 lg:grid-cols-5">
+          {/* Brand Column */}
+          <div className="sm:col-span-2 lg:col-span-2">
+            <Link href="/" className="flex items-center gap-2.5 group">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform group-hover:scale-105 shadow-sm">
                 <Sparkles className="h-4 w-4" />
               </div>
-              <span className="text-xl font-bold tracking-tight">
-                <span className="text-orange-600 dark:text-orange-400">Occa</span>
+              <span className="text-2xl font-bold tracking-tight">
+                <span className="text-primary">Occa</span>
                 <span className="text-foreground">sio</span>
               </span>
             </Link>
-            <p className="mt-4 text-sm text-muted-foreground leading-relaxed max-w-xs">
-              Where moments come alive.
+            <p className="mt-4 text-sm text-muted-foreground leading-relaxed max-w-sm">
+              The people platform where interests become friendships. Bring people together for
+              in-person meetups, conferences, workshops, and celebrations.
             </p>
             {/* Social Links */}
-            <div className="mt-6 flex items-center gap-3">
+            <div className="mt-6 flex items-center gap-2.5">
               {socialLinks.map((social) => (
                 <a
                   key={social.label}
                   href={social.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-border/50 text-muted-foreground transition-colors hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 dark:hover:bg-orange-950/30 dark:hover:text-orange-400 dark:hover:border-orange-800"
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-border/70 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary hover:border-primary/40"
                   aria-label={social.label}
                 >
                   <social.icon className="h-4 w-4" />
@@ -125,23 +134,33 @@ export function Footer() {
 
           {/* Platform Links */}
           <div>
-            <h3 className="text-sm font-semibold text-foreground">Platform</h3>
-            <ul className="mt-4 space-y-3">
+            <h3 className="text-sm font-semibold text-foreground tracking-wide">Platform</h3>
+            <ul className="mt-4 space-y-2.5">
               {platformLinks.map((link) => (
                 <li key={link.href}>
-                  <Link href={link.href} className="text-sm text-muted-foreground transition-colors hover:text-orange-600 dark:hover:text-orange-400">{link.label}</Link>
+                  <Link
+                    href={link.href}
+                    className="text-sm text-muted-foreground transition-colors hover:text-primary"
+                  >
+                    {link.label}
+                  </Link>
                 </li>
               ))}
             </ul>
           </div>
 
-          {/* Company Links */}
+          {/* Categories Links */}
           <div>
-            <h3 className="text-sm font-semibold text-foreground">Company</h3>
-            <ul className="mt-4 space-y-3">
-              {companyLinks.map((link) => (
-                <li key={link.href}>
-                  <Link href={link.href} className="text-sm text-muted-foreground transition-colors hover:text-orange-600 dark:hover:text-orange-400">{link.label}</Link>
+            <h3 className="text-sm font-semibold text-foreground tracking-wide">Discover</h3>
+            <ul className="mt-4 space-y-2.5">
+              {categories.map((cat) => (
+                <li key={cat.href}>
+                  <Link
+                    href={cat.href}
+                    className="text-sm text-muted-foreground transition-colors hover:text-primary"
+                  >
+                    {cat.label}
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -149,26 +168,54 @@ export function Footer() {
 
           {/* Newsletter */}
           <div>
-            <h3 className="text-sm font-semibold text-foreground">Stay updated</h3>
-            <p className="mt-4 text-sm text-muted-foreground">Get the latest news about features and events.</p>
-            <form onSubmit={handleNewsletter} className="mt-4 flex gap-2">
-              <Input type="email" placeholder="your@email.com" value={email} onChange={(e) => setEmail(e.target.value)} className="h-9 text-sm" />
-              <Button type="submit" size="icon" className="h-9 w-9 shrink-0 bg-orange-600 hover:bg-orange-700 text-white">
-                <ArrowRight className="h-4 w-4" />
+            <h3 className="text-sm font-semibold text-foreground tracking-wide">Stay connected</h3>
+            <p className="mt-4 text-sm text-muted-foreground">
+              Get notified about trending events and community updates.
+            </p>
+            <form onSubmit={handleNewsletter} className="mt-4 flex flex-col gap-2">
+              <Input
+                type="email"
+                placeholder="your@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="h-10 text-sm rounded-full bg-background border-border/80 px-4"
+              />
+              <Button
+                type="submit"
+                className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium w-full"
+              >
+                <span>Subscribe</span>
+                <ArrowRight className="h-4 w-4 ml-1.5" />
               </Button>
             </form>
           </div>
         </div>
 
-        {/* Warm gradient divider line before bottom bar */}
-        <div className="h-px bg-gradient-to-r from-transparent via-orange-400/50 to-transparent" />
+        {/* Divider */}
+        <div className="h-px bg-border/60" />
 
         {/* Bottom Bar */}
-        <div className="flex flex-col items-center justify-between gap-4 pb-8 pt-8 sm:flex-row">
-          <p className="text-xs text-muted-foreground">&copy; {new Date().getFullYear()} Occasio. All rights reserved.</p>
-          <div className="flex items-center gap-4">
+        <div className="flex flex-col items-center justify-between gap-4 py-8 sm:flex-row text-xs text-muted-foreground">
+          <p className="flex items-center gap-1">
+            &copy; {new Date().getFullYear()} Occasio Platform. Crafted for communities with{' '}
+            <Heart className="h-3 w-3 text-red-500 fill-red-500 inline" />
+          </p>
+          <div className="flex flex-wrap items-center gap-4">
+            {companyLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="transition-colors hover:text-foreground"
+              >
+                {link.label}
+              </Link>
+            ))}
             {legalItems.map((item) => (
-              <button key={item.label} onClick={() => setLegalOpen(item.label)} className="text-xs text-muted-foreground transition-colors hover:text-foreground">
+              <button
+                key={item.label}
+                onClick={() => setLegalOpen(item.label)}
+                className="transition-colors hover:text-foreground cursor-pointer"
+              >
                 {item.label}
               </button>
             ))}
@@ -178,7 +225,12 @@ export function Footer() {
 
       {/* Legal Modal */}
       {activeLegal && (
-        <LegalModal open={legalOpen !== null} onOpenChange={(open) => !open && setLegalOpen(null)} title={activeLegal.label} content={activeLegal.content} />
+        <LegalModal
+          open={legalOpen !== null}
+          onOpenChange={(open) => !open && setLegalOpen(null)}
+          title={activeLegal.label}
+          content={activeLegal.content}
+        />
       )}
     </footer>
   )
