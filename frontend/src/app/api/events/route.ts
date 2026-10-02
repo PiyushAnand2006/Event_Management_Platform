@@ -1,5 +1,5 @@
 import { db } from '@/lib/db'
-import { successResponse, errorResponse, getServerUser, toJsonField } from '@/lib/api-utils'
+import { successResponse, errorResponse, getServerUser, toJsonField, parseJsonField } from '@/lib/api-utils'
 import { Prisma } from '@prisma/client'
 
 export async function GET(request: Request) {
@@ -84,8 +84,8 @@ export async function GET(request: Request) {
     return successResponse({
       events: events.map((e) => ({
         ...e,
-        tags: JSON.parse(e.tags),
-        coordinates: e.coordinates ? JSON.parse(e.coordinates) : null,
+        tags: parseJsonField<string[]>(e.tags, []),
+        coordinates: e.coordinates ? parseJsonField(e.coordinates, null) : null,
         reviewCount: e._count.reviews,
         bookmarkCount: e._count.bookmarks,
         _count: undefined,
@@ -182,8 +182,8 @@ export async function POST(request: Request) {
 
     return successResponse({
       ...event,
-      tags: JSON.parse(event.tags),
-      coordinates: event.coordinates ? JSON.parse(event.coordinates) : null,
+      tags: parseJsonField<string[]>(event.tags, []),
+      coordinates: event.coordinates ? parseJsonField(event.coordinates, null) : null,
     }, 201)
   } catch (error) {
     console.error('POST /api/events error:', error)
