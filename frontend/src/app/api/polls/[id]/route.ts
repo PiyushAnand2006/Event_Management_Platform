@@ -43,8 +43,7 @@ export async function GET(
       where: { id },
       include: {
         event: { select: { id: true, organizerId: true, status: true } },
-        responses: true,
-        createdBy: { select: { id: true, name: true, image: true } }
+        responses: true
       }
     })
     if (!poll) return errorResponse('Poll not found', 404)
@@ -163,8 +162,7 @@ export async function PATCH(
       where: { id },
       data: updateData,
       include: {
-        _count: { select: { responses: true } },
-        createdBy: { select: { id: true, name: true, image: true } }
+        _count: { select: { responses: true } }
       }
     })
 
