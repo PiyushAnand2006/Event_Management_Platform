@@ -20,14 +20,10 @@ export async function GET(
       if (!isCoOrg) return errorResponse('Access denied', 403)
     }
 
-    const [registrations, invitations, polls, pollResponses] = await Promise.all([
+    const [registrations, polls, pollResponses] = await Promise.all([
       db.registration.findMany({
         where: { eventId: id },
         select: { status: true, tier: true },
-      }),
-      db.invitation.findMany({
-        where: { eventId: id },
-        select: { status: true },
       }),
       db.poll.findMany({
         where: { eventId: id },
@@ -39,8 +35,11 @@ export async function GET(
     ])
 
     const totalRegistrations = registrations.length
-    const checkedInCount = invitations.filter(
-      (inv) => inv.status === 'checked_in'
+    // Derive the check-in rate from registrations, not invitations: an
+    // invitation is optional, so counting checked_in invitation rows reported 0%
+    // for events whose guests walked in without one.
+    const checkedInCount = registrations.filter(
+      (reg) => reg.status === 'attended'
     ).length
     const checkInRate =
       totalRegistrations > 0

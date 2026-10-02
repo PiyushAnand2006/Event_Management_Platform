@@ -1,6 +1,6 @@
 import { db } from '@/lib/db'
 import { successResponse, errorResponse, getServerUser } from '@/lib/api-utils'
-import { format, parseISO } from 'date-fns'
+import { format } from 'date-fns'
 
 export async function GET(
   request: Request,
@@ -21,30 +21,34 @@ export async function GET(
       if (!isCoOrg) return errorResponse('Access denied', 403)
     }
 
-    const invitations = await db.invitation.findMany({
-      where: { eventId: id },
-      select: { checkedInAt: true, status: true },
-      orderBy: { checkedInAt: 'asc' },
+    // Registrations are the source of truth for who turned up. Reading only the
+    // invitation rows missed every walk-in, because an invitation is optional
+    // and the check-in timestamp is not stored on the registration itself.
+    const registrations = await db.registration.findMany({
+      where: { eventId: id, status: { in: ['registered', 'attended'] } },
+      select: {
+        status: true,
+        updatedAt: true,
+        invitation: { select: { checkedInAt: true } },
+      },
+      orderBy: { updatedAt: 'asc' },
     })
 
-    const total = invitations.length
-    const checkedIn = invitations.filter((inv) => inv.status === 'checked_in')
+    const total = registrations.length
+    const checkedIn = registrations.filter((reg) => reg.status === 'attended')
     const checkedInCount = checkedIn.length
     const rate = total > 0 ? Number(((checkedInCount / total) * 100).toFixed(1)) : 0
 
-    // Group by date
+    // Group by date, preferring the invitation's check-in timestamp and falling
+    // back to the registration's last update for walk-ins.
     const dateMap: Record<string, number> = {}
-    for (const inv of checkedIn) {
-      if (inv.checkedInAt) {
-        const dateKey = format(new Date(inv.checkedInAt), 'MMM d')
-        dateMap[dateKey] = (dateMap[dateKey] || 0) + 1
-      }
+    for (const reg of checkedIn) {
+      const at = reg.invitation?.checkedInAt ?? reg.updatedAt
+      const dateKey = format(new Date(at), 'MMM d')
+      dateMap[dateKey] = (dateMap[dateKey] || 0) + 1
     }
 
-    // Sort by date (approximate sort using key)
-    const sortedEntries = Object.entries(dateMap).sort((a, b) => {
-      return a[0].localeCompare(b[0])
-    })
+    const sortedEntries = Object.entries(dateMap).sort((a, b) => a[0].localeCompare(b[0]))
 
     // Build cumulative timeline
     let cumulative = 0
