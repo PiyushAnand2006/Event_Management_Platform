@@ -55,6 +55,25 @@ const typeLabels: Record<string, string> = {
   other: 'Other',
 }
 
+/**
+ * `tags` arrives in one of three shapes: an already-parsed array from
+ * `/api/events/[id]`, a JSON string straight from the database, or a legacy
+ * comma-separated string. Normalize all of them instead of assuming JSON.
+ */
+function normalizeTags(tags: string[] | string | null | undefined): string[] {
+  if (Array.isArray(tags)) return tags
+  if (typeof tags !== 'string' || !tags.trim()) return []
+  try {
+    const parsed = JSON.parse(tags)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return tags
+      .split(',')
+      .map((tag) => tag.trim())
+      .filter(Boolean)
+  }
+}
+
 interface EventDetail {
   id: string
   title: string
@@ -69,7 +88,7 @@ interface EventDetail {
   organizerId: string
   posterUrl?: string | null
   status: string
-  tags: string
+  tags?: string[] | string | null
   averageRating: number
   price: number
   isFree: boolean
@@ -476,7 +495,7 @@ export default function EventDetailPage() {
     )
   }
 
-  const parsedTags: string[] = JSON.parse(event.tags || '[]')
+  const parsedTags = normalizeTags(event.tags)
   const capacityPercent = event.capacity > 0 ? Math.min((event.registeredCount / event.capacity) * 100, 100) : 0
 
   return (
