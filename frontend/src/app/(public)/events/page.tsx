@@ -19,9 +19,13 @@ interface EventsResponse {
   success: boolean
   data: {
     events: EventCardData[]
-    total: number
-    page: number
-    limit: number
+    // `/api/events` nests the paging metadata under `pagination`
+    pagination: {
+      page: number
+      limit: number
+      total: number
+      totalPages: number
+    }
   }
 }
 
