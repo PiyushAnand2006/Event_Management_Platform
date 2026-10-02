@@ -1,5 +1,6 @@
 import { db } from '@/lib/db'
 import { successResponse, errorResponse, getServerUser, toJsonField, parseJsonField } from '@/lib/api-utils'
+import { computePollResults } from '@/lib/poll-utils'
 
 // GET: List polls for an event
 export async function GET(
@@ -50,14 +51,18 @@ export async function GET(
       where,
       orderBy: { createdAt: 'desc' },
       include: {
-        _count: { select: { responses: true } }
+        _count: { select: { responses: true } },
+        responses: { select: { selectedOptions: true } }
       }
     })
 
-    // Parse options for each poll
-    const parsedPolls = polls.map(poll => ({
+    // Parse options and tally votes for each poll. Both the organizer console and
+    // the guest live view render their result bars straight from this list, so
+    // the aggregated counts have to be included here.
+    const parsedPolls = polls.map(({ responses, ...poll }) => ({
       ...poll,
-      options: parseJsonField<string[]>(poll.options, [])
+      options: parseJsonField<string[]>(poll.options, []),
+      results: computePollResults(poll, responses)
     }))
 
     return successResponse(parsedPolls)

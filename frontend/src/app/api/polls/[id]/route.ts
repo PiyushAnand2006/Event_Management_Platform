@@ -1,33 +1,6 @@
 import { db } from '@/lib/db'
 import { successResponse, errorResponse, getServerUser, toJsonField, parseJsonField } from '@/lib/api-utils'
-
-function computePollResults(poll: { id: string; options: string; allowMultiple: boolean }, responses: { selectedOptions: string }[]) {
-  const options = parseJsonField<string[]>(poll.options, [])
-  const voteCounts: Record<number, number> = {}
-  for (let i = 0; i < options.length; i++) {
-    voteCounts[i] = 0
-  }
-  for (const resp of responses) {
-    const selected = parseJsonField<number[]>(resp.selectedOptions, [])
-    for (const idx of selected) {
-      if (idx >= 0 && idx < options.length) {
-        voteCounts[idx] = (voteCounts[idx] || 0) + 1
-      }
-    }
-  }
-  return {
-    options: options.map((text, idx) => ({
-      index: idx,
-      text,
-      votes: voteCounts[idx] || 0
-    })),
-    totalResponses: responses.length,
-    totalVotes: responses.reduce((sum, resp) => {
-      const selected = parseJsonField<number[]>(resp.selectedOptions, [])
-      return sum + selected.length
-    }, 0)
-  }
-}
+import { computePollResults } from '@/lib/poll-utils'
 
 // GET: Single poll with response counts
 export async function GET(

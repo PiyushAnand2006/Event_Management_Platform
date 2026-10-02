@@ -1,8 +1,6 @@
 import { db } from '@/lib/db'
 import { successResponse, errorResponse, getServerUser } from '@/lib/api-utils'
-import { parseJsonField } from '@/lib/api-utils'
-
-type PollOption = { text: string; votes: number }
+import { computePollResults } from '@/lib/poll-utils'
 
 export async function GET(
   request: Request,
@@ -28,23 +26,26 @@ export async function GET(
       orderBy: { createdAt: 'desc' },
       include: {
         _count: { select: { responses: true } },
+        responses: { select: { selectedOptions: true } },
       },
     })
 
-    const pollList = polls.map((poll) => {
-      const options = parseJsonField<PollOption[]>(poll.options, [])
-      const totalVotes = options.reduce((sum, o) => sum + (o.votes || 0), 0)
+    const pollList = polls.map(({ responses, ...poll }) => {
+      // Options are stored as a plain string array and the votes live on the
+      // responses, so they have to be tallied rather than read off the option.
+      const { options, totalVotes } = computePollResults(poll, responses)
       return {
         id: poll.id,
         question: poll.question,
         options: options.map((o) => ({
           text: o.text,
-          votes: o.votes || 0,
+          votes: o.votes,
           percentage:
             totalVotes > 0
-              ? Number(((o.votes || 0) / totalVotes * 100).toFixed(1))
+              ? Number(((o.votes / totalVotes) * 100).toFixed(1))
               : 0,
         })),
+        totalVotes,
         responseCount: poll._count.responses,
         isLive: poll.isLive,
         allowMultiple: poll.allowMultiple,
