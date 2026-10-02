@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
+// Most of the app calls `toast()` from sonner, while a handful of files use the
+// shadcn `useToast()` hook. Both renderers have to be mounted or the sonner
+// calls (login/signup errors, live-event feedback, newsletter, ...) fail silently.
+import { Toaster as SonnerToaster } from "sonner";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { SessionProviderWrapper } from "@/components/providers/session-provider";
 import { QueryProvider } from "@/components/providers/query-provider";
@@ -112,6 +116,7 @@ export default function RootLayout({
           </SessionProviderWrapper>
         </ThemeProvider>
         <Toaster />
+        <SonnerToaster richColors closeButton position="top-right" />
       </body>
     </html>
   );
