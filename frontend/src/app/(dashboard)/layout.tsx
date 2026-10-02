@@ -40,6 +40,10 @@ import {
 } from '@/components/ui/sheet'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
+import {
+  EventPickerDialog,
+  type EventFeature,
+} from '@/components/events/event-picker-dialog'
 
 const emptySubscribe = () => () => {}
 function useHydrated() {
@@ -51,6 +55,9 @@ type NavItem = {
   href: string
   label: string
   icon: React.ElementType
+  // Per-event features have no global route, so they open the event picker
+  // instead of navigating. See `EventPickerDialog`.
+  feature?: EventFeature
 }
 
 type NavSection = {
@@ -76,12 +83,10 @@ const organizerNav: NavEntry[] = [
   { type: 'link', href: '/organizer', label: 'Dashboard Overview', icon: LayoutDashboard },
   { type: 'link', href: '/organizer/events', label: 'My Events', icon: ListChecks },
   { type: 'link', href: '/organizer/events/create', label: 'Create Event', icon: PlusCircle },
-  { type: 'link', href: '/organizer/events#participants', label: 'Participants', icon: Users },
-  { type: 'link', href: '/organizer/events#guests', label: 'Guests & Invites', icon: MailCheck },
-  { type: 'link', href: '/organizer/events#checkin', label: 'Check-In', icon: QrCode },
-  { type: 'link', href: '/organizer/events#live', label: 'Live Console', icon: Radio },
-  { type: 'heading', label: 'Insights' },
-  { type: 'link', href: '/organizer/events/analytics', label: 'Analytics', icon: BarChart3 },
+  { type: 'link', href: '/organizer/events', label: 'Participants', icon: Users, feature: 'participants' },
+  { type: 'link', href: '/organizer/events', label: 'Guests & Invites', icon: MailCheck, feature: 'guests' },
+  { type: 'link', href: '/organizer/events', label: 'Check-In', icon: QrCode, feature: 'checkin' },
+  { type: 'link', href: '/organizer/events', label: 'Live Console', icon: Radio, feature: 'live' },
 ]
 
 const adminNav: NavEntry[] = [
@@ -110,10 +115,12 @@ function SidebarContent({
   role,
   pathname,
   onNavigate,
+  onPickFeature,
 }: {
   role: string
   pathname: string
   onNavigate?: () => void
+  onPickFeature?: (feature: EventFeature) => void
 }) {
   const router = useRouter()
   const { data: session } = useSession()
@@ -127,15 +134,26 @@ function SidebarContent({
         .slice(0, 2)
     : 'U'
 
-  const isActive = (href: string) => {
-    if (href.includes('#')) {
-      const [path] = href.split('#')
+  const isActive = (item: NavItem) => {
+    // Feature entries open the event picker rather than a route, so they never
+    // represent "where you are". Comparing only the pathname made every hash
+    // link under /organizer/events light up at the same time.
+    if (item.feature) return false
+    if (item.href.includes('#')) {
+      const [path] = item.href.split('#')
       return pathname === path
     }
-    return pathname === href
+    return pathname === item.href
   }
 
-  const handleNav = (href: string) => {
+  const handleNav = (item: NavItem) => {
+    if (item.feature) {
+      // These features live under a specific event, so ask which one first.
+      onPickFeature?.(item.feature)
+      onNavigate?.()
+      return
+    }
+    const href = item.href
     if (href.includes('#')) {
       const [path, hash] = href.split('#')
       if (pathname !== path) {
@@ -179,11 +197,11 @@ function SidebarContent({
             }
             const item = entry
             const Icon = item.icon
-            const active = isActive(item.href)
+            const active = isActive(item)
             return (
               <button
-                key={item.href}
-                onClick={() => handleNav(item.href)}
+                key={item.label}
+                onClick={() => handleNav(item)}
                 className={cn(
                   'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all text-left w-full',
                   active
@@ -251,6 +269,7 @@ export default function DashboardLayout({
   const pathname = usePathname()
   const hydrated = useHydrated()
   const [mobileOpen, setMobileOpen] = React.useState(false)
+  const [pickerFeature, setPickerFeature] = React.useState<EventFeature | null>(null)
 
   const role = session?.user?.role || 'customer'
 
@@ -272,6 +291,7 @@ export default function DashboardLayout({
               role={role}
               pathname={pathname}
               onNavigate={() => setMobileOpen(false)}
+              onPickFeature={setPickerFeature}
             />
           </SheetContent>
         </Sheet>
@@ -305,7 +325,11 @@ export default function DashboardLayout({
       <div className="flex flex-1">
         {/* Desktop Sidebar */}
         <aside className="hidden lg:flex w-64 shrink-0 flex-col border-r border-stone-200 dark:border-stone-800 bg-stone-50/80 dark:bg-stone-950/20">
-          <SidebarContent role={role} pathname={pathname} />
+          <SidebarContent
+            role={role}
+            pathname={pathname}
+            onPickFeature={setPickerFeature}
+          />
         </aside>
 
         {/* Main Content */}
@@ -315,6 +339,15 @@ export default function DashboardLayout({
           </div>
         </main>
       </div>
+
+      {/* Rendered outside the Sheet so it survives the mobile sidebar closing */}
+      <EventPickerDialog
+        feature={pickerFeature}
+        open={pickerFeature !== null}
+        onOpenChange={(open) => {
+          if (!open) setPickerFeature(null)
+        }}
+      />
     </div>
   )
 }
