@@ -45,17 +45,25 @@ function EventsPageContent() {
 
   const totalPages = Math.ceil(total / LIMIT)
 
+  const searchParamsString = searchParams.toString()
+
   // Sync URL params
   const updateUrl = useCallback(
     (params: Record<string, string>) => {
-      const sp = new URLSearchParams(searchParams.toString())
+      const sp = new URLSearchParams(searchParamsString)
       Object.entries(params).forEach(([k, v]) => {
         if (v) sp.set(k, v)
         else sp.delete(k)
       })
-      router.replace(`/events?${sp.toString()}`, { scroll: false })
+      const next = sp.toString()
+      // Bail out when the URL already matches. Calling router.replace would hand
+      // back a fresh `searchParams` object, changing this callback's identity and
+      // re-running the effect that called it — an endless render/fetch loop that
+      // remounts the cards and replays their entrance animation.
+      if (next === searchParamsString) return
+      router.replace(`/events?${next}`, { scroll: false })
     },
-    [router, searchParams]
+    [router, searchParamsString]
   )
 
   // Fetch events
@@ -110,6 +118,10 @@ function EventsPageContent() {
   // Fetch on filter/search/page change
   useEffect(() => {
     fetchEvents(page)
+  }, [page, fetchEvents])
+
+  // Keep the URL shareable, without letting the write feed back into the fetch
+  useEffect(() => {
     updateUrl({
       q: query,
       type: filters.type,
@@ -117,7 +129,7 @@ function EventsPageContent() {
       sort: filters.sort,
       page: String(page),
     })
-  }, [query, filters, page, fetchEvents, updateUrl])
+  }, [query, filters, page, updateUrl])
 
   const handleFilterChange = (key: string, value: string) => {
     setFilters((prev) => ({ ...prev, [key]: value }))
