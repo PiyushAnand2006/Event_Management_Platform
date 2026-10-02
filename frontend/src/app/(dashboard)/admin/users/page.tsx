@@ -54,12 +54,15 @@ export default function AdminUsersPage() {
       if (roleFilter !== 'all') params.set('role', roleFilter)
       const res = await fetch(`/api/admin/users?${params.toString()}`)
       if (!res.ok) throw new Error('Failed')
-      return res.json()
+      const body = await res.json()
+      // The endpoint wraps its payload in a { success, data } envelope, so the
+      // rows live one level deeper than the top-level object.
+      return body.data || body
     },
   })
 
-  const users: UserRow[] = data?.users || data || []
-  const total: number = data?.total || users.length
+  const users: UserRow[] = data?.users || []
+  const total: number = data?.pagination?.total ?? users.length
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
 
   const roleChangeMutation = useMutation({

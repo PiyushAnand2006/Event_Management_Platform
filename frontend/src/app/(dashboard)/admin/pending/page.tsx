@@ -25,7 +25,8 @@ type PendingEvent = {
   title: string
   category: string
   date: string
-  organizerName: string
+  // The API returns the organizer as a nested object rather than a flat name.
+  organizer?: { id: string; name: string; email: string }
   status: string
   createdAt: string
 }
@@ -46,12 +47,15 @@ export default function AdminPendingPage() {
       if (search) params.set('search', search)
       const res = await fetch(`/api/admin/pending-events?${params.toString()}`)
       if (!res.ok) throw new Error('Failed')
-      return res.json()
+      const body = await res.json()
+      // The endpoint wraps its payload in a { success, data } envelope, so the
+      // rows live one level deeper than the top-level object.
+      return body.data || body
     },
   })
 
-  const events: PendingEvent[] = data?.events || data || []
-  const total: number = data?.total || events.length
+  const events: PendingEvent[] = data?.events || []
+  const total: number = data?.pagination?.total ?? events.length
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
 
   const approveMutation = useMutation({

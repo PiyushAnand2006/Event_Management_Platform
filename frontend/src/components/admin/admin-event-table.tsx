@@ -23,7 +23,7 @@ type PendingEvent = {
   title: string
   category: string
   date: string
-  organizerName: string
+  organizer?: { id: string; name: string; email: string }
   status: string
   createdAt: string
 }
@@ -197,7 +197,7 @@ export function AdminEventTable({
                     <div className="flex items-center gap-1.5">
                       <User className="h-3.5 w-3.5 text-muted-foreground" />
                       <span className="text-sm truncate max-w-[120px]">
-                        {event.organizerName}
+                        {event.organizer?.name || '—'}
                       </span>
                     </div>
                   </TableCell>
