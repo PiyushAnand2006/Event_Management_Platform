@@ -50,8 +50,7 @@ export async function GET(
       where,
       orderBy: { createdAt: 'desc' },
       include: {
-        _count: { select: { responses: true } },
-        createdBy: { select: { id: true, name: true, image: true } }
+        _count: { select: { responses: true } }
       }
     })
 
@@ -120,8 +119,7 @@ export async function POST(
         createdBy: user.id,
       },
       include: {
-        _count: { select: { responses: true } },
-        createdBy: { select: { id: true, name: true, image: true } }
+        _count: { select: { responses: true } }
       }
     })
 
