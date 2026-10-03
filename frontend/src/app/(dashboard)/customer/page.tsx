@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -82,6 +82,23 @@ export default function CustomerDashboardPage() {
   const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null)
   const [calendarView, setCalendarView] = useState<View>('month')
   const [searchQuery, setSearchQuery] = useState('')
+  const [activeTab, setActiveTab] = useState<string>('upcoming')
+
+  // Sidebar links point at /customer#past, #saved, #browse — sync the active
+  // tab to the URL hash so those links land on the right section.
+  useEffect(() => {
+    const applyHash = () => {
+      const hash = window.location.hash.replace('#', '')
+      if (hash === 'past' || hash === 'saved' || hash === 'browse') {
+        setActiveTab(hash)
+      } else if (hash === '' || hash === 'upcoming') {
+        setActiveTab('upcoming')
+      }
+    }
+    applyHash()
+    window.addEventListener('hashchange', applyHash)
+    return () => window.removeEventListener('hashchange', applyHash)
+  }, [])
 
   // Fetch user's registered events (upcoming + past)
   const {
@@ -113,7 +130,16 @@ export default function CustomerDashboardPage() {
       const res = await fetch('/api/users/me/bookmark')
       if (!res.ok) throw new Error('Failed to fetch bookmarks')
       const data = await res.json()
-      return data.events || data || []
+      // GET /api/users/me/bookmark returns { success, data: Bookmark[] }
+      // where each row embeds the event as `.event`.
+      const bookmarks = Array.isArray(data.data)
+        ? data.data
+        : Array.isArray(data)
+        ? data
+        : []
+      return bookmarks
+        .map((bookmark: { event?: EventItem }) => bookmark.event)
+        .filter(Boolean)
     },
   })
 
@@ -146,7 +172,13 @@ export default function CustomerDashboardPage() {
       const res = await fetch(`/api/events?${params.toString()}`)
       if (!res.ok) throw new Error('Failed to fetch events')
       const data = await res.json()
-      return data.events || data || []
+      return Array.isArray(data.data?.events)
+        ? data.data.events
+        : Array.isArray(data.events)
+        ? data.events
+        : Array.isArray(data)
+        ? data
+        : []
     },
   })
 
@@ -186,7 +218,14 @@ export default function CustomerDashboardPage() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="upcoming" className="space-y-6">
+      <Tabs
+        value={activeTab}
+        onValueChange={(val) => {
+          setActiveTab(val)
+          history.replaceState(null, '', val === 'upcoming' ? '/customer' : `/customer#${val}`)
+        }}
+        className="space-y-6"
+      >
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <TabsList className="w-full sm:w-auto">
             <TabsTrigger value="upcoming" className="flex items-center gap-1.5">

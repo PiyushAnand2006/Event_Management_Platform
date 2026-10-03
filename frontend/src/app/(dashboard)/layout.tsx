@@ -50,6 +50,20 @@ function useHydrated() {
   return useSyncExternalStore(emptySubscribe, () => true, () => false)
 }
 
+// Reactive URL hash so sidebar items sharing one path (/customer#past, #saved,
+// …) can highlight the entry that actually matches the current hash.
+function useHash() {
+  const subscribe = (onStoreChange: () => void) => {
+    window.addEventListener('hashchange', onStoreChange)
+    return () => window.removeEventListener('hashchange', onStoreChange)
+  }
+  return useSyncExternalStore(
+    subscribe,
+    () => window.location.hash,
+    () => ''
+  )
+}
+
 type NavItem = {
   type: 'link'
   href: string
@@ -124,6 +138,7 @@ function SidebarContent({
 }) {
   const router = useRouter()
   const { data: session } = useSession()
+  const hash = useHash()
   const navItems = getNavItems(role)
   const userInitials = session?.user?.name
     ? session.user.name
@@ -140,10 +155,10 @@ function SidebarContent({
     // link under /organizer/events light up at the same time.
     if (item.feature) return false
     if (item.href.includes('#')) {
-      const [path] = item.href.split('#')
-      return pathname === path
+      const [path, hashPart] = item.href.split('#')
+      return pathname === path && hash === `#${hashPart}`
     }
-    return pathname === item.href
+    return pathname === item.href && hash === ''
   }
 
   const handleNav = (item: NavItem) => {
@@ -158,8 +173,17 @@ function SidebarContent({
       const [path, hash] = href.split('#')
       if (pathname !== path) {
         router.push(href)
-      } else {
-        document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth' })
+      } else if (window.location.hash !== `#${hash}`) {
+        // Setting the hash fires a hashchange event; the customer dashboard
+        // listens for it to switch to the matching tab.
+        window.location.hash = hash
+      }
+    } else if (pathname === href) {
+      // Already on this page — clear any active hash and notify listeners,
+      // since router.push on the same path never fires hashchange.
+      if (window.location.hash) {
+        history.replaceState(null, '', href)
+        window.dispatchEvent(new HashChangeEvent('hashchange'))
       }
     } else {
       router.push(href)
