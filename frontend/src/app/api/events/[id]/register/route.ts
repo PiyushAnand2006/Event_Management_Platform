@@ -1,6 +1,7 @@
 import { db } from '@/lib/db'
 import { successResponse, errorResponse, getServerUser } from '@/lib/api-utils'
 import { createNotification } from '@/lib/notification-helper'
+import { generateRegistrationToken, generateQRCode } from '@/lib/invitation'
 
 export async function POST(
   request: Request,
@@ -53,6 +54,23 @@ export async function POST(
       return { registration, status }
     })
 
+    // Issue the customer's personal QR exactly once, at registration time.
+    // It is derived from the registration id and stored on the row — it is
+    // never regenerated afterwards.
+    let qrCodeDataUrl: string | null = null
+    if (result.status === 'registered') {
+      const token = await generateRegistrationToken(
+        result.registration.id,
+        id,
+        result.registration.tier
+      )
+      qrCodeDataUrl = await generateQRCode(token)
+      await db.registration.update({
+        where: { id: result.registration.id },
+        data: { qrCodeDataUrl },
+      })
+    }
+
     // Create notification
     if (result.status === 'registered') {
       await createNotification(
@@ -75,6 +93,7 @@ export async function POST(
     return successResponse({
       ...result.registration,
       status: result.status,
+      qrCodeDataUrl,
     }, 201)
   } catch (error) {
     console.error('POST /api/events/[id]/register error:', error)

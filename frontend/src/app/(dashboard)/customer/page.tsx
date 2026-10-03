@@ -72,6 +72,10 @@ type EventItem = {
   capacity?: number
   registeredCount?: number
   registrationStatus?: string
+  registrationId?: string
+  tier?: string
+  seatLabel?: string | null
+  qrCodeDataUrl?: string | null
 }
 
 export default function CustomerDashboardPage() {
@@ -100,23 +104,46 @@ export default function CustomerDashboardPage() {
     return () => window.removeEventListener('hashchange', applyHash)
   }, [])
 
-  // Fetch user's registered events (upcoming + past)
+  // Fetch the customer's own registrations — each carries their personal QR
   const {
     data: registeredEvents = [],
     isLoading: loadingRegistered,
   } = useQuery({
     queryKey: ['my-registrations'],
     queryFn: async () => {
-      const res = await fetch('/api/events?registered=true')
+      const res = await fetch('/api/users/me/registrations')
       if (!res.ok) throw new Error('Failed to fetch registrations')
-      const data = await res.json()
-      return Array.isArray(data.data?.events)
-        ? data.data.events
-        : Array.isArray(data.events)
-        ? data.events
-        : Array.isArray(data)
-        ? data
-        : []
+      const json = await res.json()
+      const regs = json.data?.registrations ?? []
+      return regs.map((reg: {
+        id: string
+        status: string
+        tier: string
+        seatLabel: string | null
+        qrCodeDataUrl: string | null
+        event: {
+          id: string; title: string; description?: string; date: string;
+          endTime?: string; location?: string; type?: string; category?: string;
+          posterUrl?: string; isFree?: boolean; price?: number
+        }
+      }) => ({
+        id: reg.event.id,
+        title: reg.event.title,
+        description: reg.event.description,
+        date: reg.event.date,
+        endTime: reg.event.endTime,
+        location: reg.event.location,
+        price: reg.event.isFree ? 0 : (reg.event.price ?? 0),
+        category: reg.event.category,
+        type: reg.event.type,
+        poster: reg.event.posterUrl,
+        status: 'published',
+        registrationId: reg.id,
+        registrationStatus: reg.status,
+        tier: reg.tier,
+        seatLabel: reg.seatLabel,
+        qrCodeDataUrl: reg.qrCodeDataUrl,
+      }))
     },
   })
 
@@ -285,12 +312,38 @@ export default function CustomerDashboardPage() {
             >
               {upcomingEvents.map((event: EventItem, i: number) => (
                 <motion.div
-                  key={event.id}
+                  key={event.registrationId || event.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05 }}
+                  className="space-y-2"
                 >
                   <EventCard event={event} onClick={() => setSelectedEvent(event)} />
+                  {event.qrCodeDataUrl && (
+                    <div className="rounded-xl border bg-card p-3 flex items-center gap-3">
+                      {/* Stored black-on-transparent PNG: invert for dark mode */}
+                      <img
+                        src={event.qrCodeDataUrl}
+                        alt={`Entry QR for ${event.title}`}
+                        className="h-20 w-20 shrink-0 dark:invert"
+                      />
+                      <div className="text-xs space-y-0.5 min-w-0">
+                        <p className="font-medium flex items-center gap-1.5">
+                          Your entry QR
+                          {event.registrationStatus === 'attended' && (
+                            <Badge className="bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300 text-[10px]">
+                              Checked In
+                            </Badge>
+                          )}
+                        </p>
+                        <p className="text-muted-foreground leading-relaxed">
+                          {event.registrationStatus === 'attended'
+                            ? 'This QR was scanned at the venue.'
+                            : 'Show this at the venue entrance. It is unique to you and works once.'}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </motion.div>
               ))}
             </motion.div>

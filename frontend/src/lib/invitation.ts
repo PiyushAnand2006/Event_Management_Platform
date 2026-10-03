@@ -1,4 +1,5 @@
 import { SignJWT, jwtVerify } from 'jose'
+import { randomUUID } from 'crypto'
 import { toBuffer } from 'bwip-js'
 import { sendEmail } from '@/lib/email'
 
@@ -50,6 +51,52 @@ export async function verifyInvitationToken(
     if (!payload.invId || !payload.eventId) return null
     return {
       invId: payload.invId as string,
+      eventId: payload.eventId as string,
+      tier: (payload.tier as string) || 'general',
+    }
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Generate the personal QR JWT for a registration. Issued exactly once when
+ * the registration is created (or lazily backfilled for legacy rows) and
+ * stored on the registration — never regenerated afterwards.
+ */
+export async function generateRegistrationToken(
+  registrationId: string,
+  eventId: string,
+  tier: string
+): Promise<string> {
+  const payload = {
+    regId: registrationId,
+    eventId,
+    tier,
+    jti: randomUUID(),
+  }
+
+  const token = await new SignJWT(payload)
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime(Math.floor(Date.now() / 1000) + 90 * 24 * 3600)
+    .sign(SECRET)
+
+  return token
+}
+
+/**
+ * Verify and decode a registration QR JWT.
+ * Returns null on failure (expired, invalid, etc.)
+ */
+export async function verifyRegistrationToken(
+  token: string
+): Promise<{ regId: string; eventId: string; tier: string } | null> {
+  try {
+    const { payload } = await jwtVerify(token, SECRET)
+    if (!payload.regId || !payload.eventId) return null
+    return {
+      regId: payload.regId as string,
       eventId: payload.eventId as string,
       tier: (payload.tier as string) || 'general',
     }
