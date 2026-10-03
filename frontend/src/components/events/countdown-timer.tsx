@@ -47,13 +47,13 @@ function hasEnded(start: Date, end?: Date | null): boolean {
 
 function TimeUnit({ value, label }: { value: number; label: string }) {
   return (
-    <div className="flex flex-col items-center gap-1">
-      <div className="bg-card border border-border/60 rounded-lg w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center shadow-sm">
-        <span className="text-2xl sm:text-3xl font-bold tabular-nums text-foreground">
+    <div className="flex flex-col items-center gap-1 flex-1 min-w-0">
+      <div className="bg-card border border-border/60 rounded-lg w-full h-14 sm:h-16 flex items-center justify-center shadow-sm">
+        <span className="text-xl sm:text-2xl font-bold tabular-nums text-foreground">
           {String(value).padStart(2, '0')}
         </span>
       </div>
-      <span className="text-xs sm:text-sm text-muted-foreground font-medium uppercase tracking-wider">
+      <span className="text-[10px] sm:text-xs text-muted-foreground font-medium uppercase tracking-wider">
         {label}
       </span>
     </div>
@@ -123,14 +123,12 @@ export function CountdownTimer({ targetDate, endDate }: CountdownTimerProps) {
         <Clock className="h-4 w-4" />
         <span className="font-medium">Event starts in</span>
       </div>
-      <div className="flex items-center gap-2 sm:gap-3">
+      <div className="flex items-center gap-1.5 sm:gap-2">
         <TimeUnit value={timeLeft.days} label="Days" />
-        <span className={cn('text-2xl font-bold text-muted-foreground/40 pb-6')}>:</span>
+        <span className={cn('text-xl font-bold text-muted-foreground/40 pb-6')}>:</span>
         <TimeUnit value={timeLeft.hours} label="Hours" />
-        <span className={cn('text-2xl font-bold text-muted-foreground/40 pb-6')}>:</span>
+        <span className={cn('text-xl font-bold text-muted-foreground/40 pb-6')}>:</span>
         <TimeUnit value={timeLeft.minutes} label="Min" />
-        <span className={cn('text-2xl font-bold text-muted-foreground/40 pb-6')}>:</span>
-        <TimeUnit value={timeLeft.seconds} label="Sec" />
       </div>
     </div>
   )
