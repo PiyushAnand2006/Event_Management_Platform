@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import { motion } from 'framer-motion'
-import { Eye, EyeOff, Loader2, CalendarDays, UserPlus, FileText, ShieldCheck, Cookie } from 'lucide-react'
+import { Eye, EyeOff, Loader2, CalendarDays, UserPlus, FileText, ShieldCheck, Cookie, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -104,6 +104,12 @@ const COOKIES_CONTENT = (
   </>
 )
 
+// Client-side validation copy for the signup form
+const LENGTH_MESSAGE = 'Password must be at least 8 characters'
+const COMPLEXITY_MESSAGE = 'Must include uppercase, lowercase, and number'
+const MISMATCH_MESSAGE = 'Passwords do not match'
+const MATCH_MESSAGE = 'Passwords must match'
+
 export default function SignupPage() {
   const router = useRouter()
   const [name, setName] = useState('')
@@ -143,22 +149,22 @@ export default function SignupPage() {
         break
       case 'password':
         if (value && value.length < 8) {
-          newErrors.password = 'Password must be at least 8 characters'
+          newErrors.password = LENGTH_MESSAGE
         } else if (value && !/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(value)) {
-          newErrors.password = 'Must include uppercase, lowercase, and number'
+          newErrors.password = COMPLEXITY_MESSAGE
         } else {
           delete newErrors.password
         }
         // Revalidate confirm password
         if (confirmPassword && confirmPassword !== value) {
-          newErrors.confirmPassword = 'Passwords do not match'
+          newErrors.confirmPassword = MISMATCH_MESSAGE
         } else if (confirmPassword) {
           delete newErrors.confirmPassword
         }
         break
       case 'confirmPassword':
         if (value && value !== password) {
-          newErrors.confirmPassword = 'Passwords do not match'
+          newErrors.confirmPassword = MISMATCH_MESSAGE
         } else {
           delete newErrors.confirmPassword
         }
@@ -175,9 +181,9 @@ export default function SignupPage() {
     const validationErrors: Record<string, string> = {}
     if (!name.trim() || name.trim().length < 2) validationErrors.name = 'Name is required (min 2 chars)'
     if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) validationErrors.email = 'Valid email is required'
-    if (!password || password.length < 8) validationErrors.password = 'Password must be at least 8 characters'
-    else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) validationErrors.password = 'Must include uppercase, lowercase, and number'
-    if (!confirmPassword || confirmPassword !== password) validationErrors.confirmPassword = 'Passwords must match'
+    if (!password || password.length < 8) validationErrors.password = LENGTH_MESSAGE
+    else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) validationErrors.password = COMPLEXITY_MESSAGE
+    if (!confirmPassword || confirmPassword !== password) validationErrors.confirmPassword = MATCH_MESSAGE
     if (!role) validationErrors.role = 'Please select a role'
     if (!agreedToTerms) validationErrors.terms = 'You must agree to the terms'
 
@@ -379,34 +385,29 @@ export default function SignupPage() {
                   className="mt-0.5"
                 />
                 <Label htmlFor="terms" className="text-sm font-normal leading-snug cursor-pointer">
-                  I agree to the{' '}
-                  <button
-                    type="button"
-                    onClick={(e) => { e.preventDefault(); setTermsOpen(true) }}
-                    className="text-primary hover:text-primary/80 font-medium inline-flex items-center gap-1 underline-offset-2 hover:underline"
-                  >
-                    <FileText className="h-3 w-3" />
-                    Terms of Service
-                  </button>
-                  {', '}
-                  <button
-                    type="button"
-                    onClick={(e) => { e.preventDefault(); setPrivacyOpen(true) }}
-                    className="text-primary hover:text-primary/80 font-medium inline-flex items-center gap-1 underline-offset-2 hover:underline"
-                  >
-                    <ShieldCheck className="h-3 w-3" />
-                    Privacy Policy
-                  </button>
-                  {' & '}
-                  <button
-                    type="button"
-                    onClick={(e) => { e.preventDefault(); setCookiesOpen(true) }}
-                    className="text-primary hover:text-primary/80 font-medium inline-flex items-center gap-1 underline-offset-2 hover:underline"
-                  >
-                    <Cookie className="h-3 w-3" />
-                    Cookie Policy
-                  </button>
+                  I agree to the following
                 </Label>
+              </div>
+              <div className="grid gap-1.5 pl-6">
+                {[
+                  { icon: FileText, label: 'Terms of Service', open: () => setTermsOpen(true) },
+                  { icon: ShieldCheck, label: 'Privacy Policy', open: () => setPrivacyOpen(true) },
+                  { icon: Cookie, label: 'Cookie Policy', open: () => setCookiesOpen(true) },
+                ].map(({ icon: Icon, label, open }) => (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={open}
+                    disabled={isLoading}
+                    className="group flex w-full items-center gap-2.5 rounded-lg border border-border/60 bg-muted/40 px-3 py-2 text-sm transition-colors hover:border-primary/40 hover:bg-primary/5 cursor-pointer"
+                  >
+                    <Icon className="h-3.5 w-3.5 text-primary shrink-0" />
+                    <span className="font-medium text-foreground/90 group-hover:text-primary transition-colors">
+                      {label}
+                    </span>
+                    <ExternalLink className="ml-auto h-3 w-3 text-muted-foreground/60 group-hover:text-primary transition-colors" />
+                  </button>
+                ))}
               </div>
               {errors.terms && <p className="text-xs text-destructive">{errors.terms}</p>}
             </div>
