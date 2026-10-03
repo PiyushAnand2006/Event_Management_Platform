@@ -98,8 +98,22 @@ export default function TicketPage() {
           setNotFound(true)
           return
         }
-        const data = await res.json()
-        setTicket(data)
+        const json = await res.json()
+        // The API returns { success, data: { invitation, event, seat, guest, tier } }
+        const payload = json?.data ?? json
+        setTicket({
+          id: payload.invitation?.id ?? invitationId,
+          eventTitle: payload.event?.title || 'Event',
+          eventDate: payload.event?.date || new Date().toISOString(),
+          eventLocation: payload.event?.location || '',
+          eventType: payload.event?.type || 'general',
+          guestName: payload.guest?.name || 'Guest',
+          tier: payload.tier || 'general',
+          seatLabel: payload.seat?.label || null,
+          barcodeUrl: payload.invitation?.barcodeUrl || null,
+          qrUrl: payload.invitation?.qrUrl || null,
+          status: payload.invitation?.status || 'issued',
+        })
       } catch {
         setNotFound(true)
       } finally {
@@ -236,7 +250,7 @@ export default function TicketPage() {
                 <img
                   src={ticket.barcodeUrl}
                   alt="Ticket barcode"
-                  className="h-16 w-full max-w-xs object-contain"
+                  className="h-16 w-full max-w-xs object-contain dark:invert"
                   onError={() => setImgErrors((prev) => ({ ...prev, barcode: true }))}
                 />
               </div>
@@ -256,7 +270,7 @@ export default function TicketPage() {
                 <img
                   src={ticket.qrUrl}
                   alt="Ticket QR code"
-                  className="h-32 w-32 object-contain rounded-lg"
+                  className="h-32 w-32 object-contain rounded-lg dark:invert"
                   onError={() => setImgErrors((prev) => ({ ...prev, qr: true }))}
                 />
               </div>
