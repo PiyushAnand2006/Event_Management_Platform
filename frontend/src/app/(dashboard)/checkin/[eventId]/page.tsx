@@ -92,8 +92,9 @@ export default function CheckinPage() {
       try {
         const res = await fetch(`/api/events/${eventId}`)
         if (res.ok) {
-          const data = await res.json()
-          setEventName(data.title || data.name || 'Event')
+          const json = await res.json()
+          const event = json.data ?? json
+          setEventName(event.title || event.name || 'Event')
         }
       } catch {
         setEventName('Event')

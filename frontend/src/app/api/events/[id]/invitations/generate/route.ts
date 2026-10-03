@@ -22,8 +22,15 @@ export async function POST(
       return errorResponse('Forbidden', 403)
     }
 
-    const body = await request.json()
-    const registrationIds: string[] = body.registrationIds || []
+    // The dashboard posts without a body to generate for every registration;
+    // only a JSON body carries an explicit registrationIds subset.
+    let registrationIds: string[] = []
+    try {
+      const body = await request.json()
+      registrationIds = body.registrationIds || []
+    } catch {
+      // empty request body — generate for all
+    }
 
     // Get registrations to generate invitations for
     let registrations

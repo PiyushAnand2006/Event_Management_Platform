@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Send, ShieldBan, Loader2, Inbox } from 'lucide-react'
+import { Send, ShieldBan, Loader2, Inbox, Ticket } from 'lucide-react'
 import {
   Table,
   TableBody,
@@ -170,6 +170,16 @@ export default function InvitationTable({
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
+                      <a
+                        href={`/ticket/${inv.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="View the guest's QR ticket"
+                        className="inline-flex items-center gap-1 rounded-md px-2 h-7 text-xs text-orange-700 hover:text-orange-800 hover:bg-orange-50 dark:text-orange-400 dark:hover:bg-orange-950/40 transition-colors cursor-pointer"
+                      >
+                        <Ticket className="h-3 w-3" />
+                        <span className="hidden sm:inline">View Ticket</span>
+                      </a>
                       {inv.status !== 'revoked' && inv.status !== 'checked_in' && (
                         <Button
                           variant="ghost"

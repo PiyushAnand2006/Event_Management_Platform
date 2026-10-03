@@ -70,7 +70,8 @@ export default function OrganizerGuestsPage() {
     queryFn: async () => {
       const res = await fetch(`/api/events/${eventId}`)
       if (!res.ok) throw new Error('Failed to fetch event')
-      return res.json()
+      const json = await res.json()
+      return json.data ?? json
     },
     enabled: !!eventId,
   })
@@ -86,7 +87,14 @@ export default function OrganizerGuestsPage() {
     queryFn: async () => {
       const res = await fetch(`/api/checkin/${eventId}/stats`)
       if (!res.ok) throw new Error('Failed to fetch stats')
-      return res.json()
+      const json = await res.json()
+      const d = json.data ?? json
+      return {
+        total: d.totalInvited ?? d.total ?? 0,
+        checkedIn: d.checkedIn ?? 0,
+        pending: d.pending ?? 0,
+        sent: d.sent ?? 0,
+      }
     },
     enabled: !!eventId,
   })
@@ -105,7 +113,7 @@ export default function OrganizerGuestsPage() {
       const res = await fetch(`/api/events/${eventId}/invitations?${params.toString()}`)
       if (!res.ok) throw new Error('Failed to fetch invitations')
       const data = await res.json()
-      return Array.isArray(data.data?.invitations)
+      const list = Array.isArray(data.data?.invitations)
         ? data.data.invitations
         : Array.isArray(data.invitations)
         ? data.invitations
@@ -114,6 +122,18 @@ export default function OrganizerGuestsPage() {
         : Array.isArray(data)
         ? data
         : []
+      // The API nests the guest under registration.user; flatten for the table
+      return list.map((inv: {
+        registration?: { user?: { name?: string; email?: string }; tier?: string }
+        guestName?: string
+        guestEmail?: string
+        tier?: string
+      }) => ({
+        ...inv,
+        guestName: inv.guestName ?? inv.registration?.user?.name ?? null,
+        guestEmail: inv.guestEmail ?? inv.registration?.user?.email ?? null,
+        tier: inv.tier ?? inv.registration?.tier ?? 'general',
+      }))
     },
     enabled: !!eventId,
   })
@@ -353,8 +373,7 @@ export default function OrganizerGuestsPage() {
                 <BulkSendModal
                   eventId={eventId}
                   onSent={handleRefresh}
-                />
-              </CardContent>
+                />              </CardContent>
             </Card>
           </motion.div>
         </TabsContent>
