@@ -44,3 +44,6 @@ tool-results/
 # Internal docs
 AGENTS.md
 CLAUDE.md
+
+# Security scanner local state
+.mimosa/
