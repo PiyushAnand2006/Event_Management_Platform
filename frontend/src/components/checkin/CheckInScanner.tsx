@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { Html5Qrcode } from 'html5-qrcode'
-import { Camera, CameraOff, ScanLine } from 'lucide-react'
+import { Camera, CameraOff, QrCode, ScanLine } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 
 type CheckInScannerProps = {
@@ -37,9 +39,11 @@ export default function CheckInScanner({
 
   const [scannerStatus, setScannerStatus] = useState<ScannerStatus>('pending')
   const [cooldown, setCooldown] = useState(false)
+  const [cameraOn, setCameraOn] = useState(false)
+  const [manualCode, setManualCode] = useState('')
 
   // Derive display state from props + internal state
-  const state: DisplayState = !active
+  const state: DisplayState = !active || !cameraOn
     ? 'idle'
     : scannerStatus === 'pending'
       ? 'starting'
@@ -63,7 +67,7 @@ export default function CheckInScanner({
   }, [])
 
   useEffect(() => {
-    if (!active) {
+    if (!active || !cameraOn) {
       stopScanner()
       // Defer state resets to avoid synchronous setState in effect
       queueMicrotask(() => {
@@ -99,10 +103,15 @@ export default function CheckInScanner({
           }, COOLDOWN_MS)
         },
         (errorMessage) => {
-          if (
-            !errorMessage.includes('QR code not found') &&
-            !errorMessage.includes('No QR code found')
-          ) {
+          // html5-qrcode calls this for every frame with no code in it
+          // ("QR code parse error, error = NotFoundException: ..."), so only
+          // surface messages that are not routine frame misses.
+          const benign =
+            errorMessage.includes('QR code parse error') ||
+            errorMessage.includes('NotFoundException') ||
+            errorMessage.includes('QR code not found') ||
+            errorMessage.includes('No QR code found')
+          if (!benign) {
             onErrorRef.current?.(errorMessage)
           }
         }
@@ -133,7 +142,7 @@ export default function CheckInScanner({
       stopScanner()
       if (cooldownTimerRef.current) clearTimeout(cooldownTimerRef.current)
     }
-  }, [active, stopScanner])
+  }, [active, cameraOn, stopScanner])
 
   return (
     <div
@@ -149,6 +158,65 @@ export default function CheckInScanner({
         id={SCANNER_ID}
         className="w-full min-h-[300px]"
       />
+
+      {/* Camera off overlay with scan start control */}
+      {state === 'idle' && active && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-950 text-gray-300 gap-4 px-6">
+          <ScanLine className="h-12 w-12 text-gray-600" />
+          <p className="text-sm text-gray-500">Camera is off</p>
+          <Button
+            onClick={() => setCameraOn(true)}
+            className="bg-orange-600 hover:bg-orange-700 text-white font-semibold cursor-pointer"
+          >
+            <ScanLine className="mr-2 h-4 w-4" />
+            Start Scan
+          </Button>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              const value = manualCode.trim()
+              if (!value) return
+              onScanRef.current(value)
+              setManualCode('')
+            }}
+            className="w-full max-w-sm space-y-2 pt-2"
+          >
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <QrCode className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                <Input
+                  placeholder="Paste or type QR barcode payload..."
+                  value={manualCode}
+                  onChange={(e) => setManualCode(e.target.value)}
+                  className="pl-9 text-sm bg-gray-900 border-gray-700 text-gray-200 placeholder:text-gray-500"
+                />
+              </div>
+              <Button
+                type="submit"
+                disabled={!manualCode.trim()}
+                className="bg-orange-600 hover:bg-orange-700 text-white font-semibold cursor-pointer shrink-0"
+              >
+                Check In
+              </Button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Stop scan control while camera is live */}
+      {(state === 'scanning' || state === 'cooldown' || state === 'starting') && (
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCameraOn(false)}
+            className="bg-gray-950/80 border-gray-700 text-gray-200 hover:bg-gray-900 hover:text-white cursor-pointer backdrop-blur-sm"
+          >
+            <ScanLine className="mr-1.5 h-3.5 w-3.5" />
+            Stop Scan
+          </Button>
+        </div>
+      )}
 
       {/* Camera denied overlay */}
       {state === 'denied' && (

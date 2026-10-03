@@ -65,7 +65,7 @@ export default function CheckinPage() {
   const [eventName, setEventName] = useState<string>('')
   const [stats, setStats] = useState<CheckInStats>({ total: 0, checkedIn: 0, pending: 0 })
   const [lastResult, setLastResult] = useState<CheckInResultData | null>(null)
-  const [scannerError, setScannerError] = useState<boolean>(false)
+  const [scannerError, setScannerError] = useState<string | null>(null)
   const [loadingStats, setLoadingStats] = useState(true)
   const [simulatedCode, setSimulatedCode] = useState('')
 
@@ -73,8 +73,8 @@ export default function CheckinPage() {
     try {
       const res = await fetch(`/api/checkin/${eventId}/stats`)
       if (res.ok) {
-        const data = await res.json()
-        setStats(data)
+        const json = await res.json()
+        setStats(json.data ?? json)
       }
     } catch {
       // silently fail for stats
@@ -157,6 +157,13 @@ export default function CheckinPage() {
     setSimulatedCode('')
   }
 
+  // Auto-dismiss the scan result panel after a few seconds
+  useEffect(() => {
+    if (!lastResult) return
+    const timer = setTimeout(() => setLastResult(null), 6000)
+    return () => clearTimeout(timer)
+  }, [lastResult])
+
   if (authStatus === 'loading') {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -224,6 +231,9 @@ export default function CheckinPage() {
                     <p className="text-sm text-muted-foreground leading-relaxed">
                       Camera permissions are disabled or no webcam is detected. You can use the search panel or enter a QR payload below to check in guests.
                     </p>
+                    {scannerError && (
+                      <p className="text-xs text-muted-foreground/70 font-mono break-words">{scannerError}</p>
+                    )}
                   </div>
 
                   {/* QR Code Simulation Bar */}
@@ -253,7 +263,7 @@ export default function CheckinPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setScannerError(false)}
+                      onClick={() => setScannerError(null)}
                       className="rounded-full cursor-pointer"
                     >
                       <RotateCw className="mr-1.5 h-3.5 w-3.5" />
@@ -272,7 +282,7 @@ export default function CheckinPage() {
                 >
                   <CheckInScanner
                     onScan={handleScanResult}
-                    onError={() => setScannerError(true)}
+                    onError={(message) => setScannerError(message)}
                   />
                 </Suspense>
               )}

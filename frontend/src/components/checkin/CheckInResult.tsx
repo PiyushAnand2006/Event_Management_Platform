@@ -1,7 +1,7 @@
 'use client'
 
 import { AnimatePresence, motion } from 'framer-motion'
-import { CheckCircle, XCircle } from 'lucide-react'
+import { CheckCircle, X, XCircle } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
@@ -16,9 +16,10 @@ type CheckInResultData = {
 
 type CheckInResultProps = {
   result: CheckInResultData | null
+  onDismiss?: () => void
 }
 
-export default function CheckInResult({ result }: CheckInResultProps) {
+export default function CheckInResult({ result, onDismiss }: CheckInResultProps) {
   if (!result) return null
 
   return (
@@ -38,7 +39,17 @@ export default function CheckInResult({ result }: CheckInResultProps) {
               : 'border-red-500/40 bg-red-50 dark:bg-red-950/30'
           )}
         >
-          <CardContent className="p-4 flex items-start gap-3">
+          <CardContent className="p-4 flex items-start gap-3 relative">
+            {onDismiss && (
+              <button
+                type="button"
+                onClick={onDismiss}
+                aria-label="Dismiss"
+                className="absolute right-2 top-2 rounded-md p-1 text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
             {result.success ? (
               <div className="flex-shrink-0 mt-0.5">
                 <div className="h-10 w-10 rounded-full bg-orange-100 dark:bg-orange-900/50 flex items-center justify-center">

@@ -9,20 +9,28 @@ export async function POST(request: Request) {
     if (!user) return errorResponse('Unauthorized', 401)
 
     const body = await request.json()
-    const { token, eventId } = body
+    const { token, barcode, eventId } = body
+    const presented: string = token || barcode
 
-    if (!token || !eventId) {
+    if (!presented || !eventId) {
       return errorResponse('Token and eventId are required', 400)
     }
 
-    // Verify the JWT token
-    const payload = await verifyInvitationToken(token)
-    if (!payload) {
-      return errorResponse('Invalid or expired token', 400)
-    }
-
-    if (payload.eventId !== eventId) {
-      return errorResponse('Token does not match this event', 400)
+    // QR codes carry the signed invitation JWT; the Code128 barcode scans as
+    // the plain invitation id. Accept either.
+    const isJwt = presented.split('.').length === 3
+    let invId: string
+    if (isJwt) {
+      const payload = await verifyInvitationToken(presented)
+      if (!payload) {
+        return errorResponse('Invalid or expired token', 400)
+      }
+      if (payload.eventId !== eventId) {
+        return errorResponse('Token does not match this event', 400)
+      }
+      invId = payload.invId
+    } else {
+      invId = presented
     }
 
     // Perform atomic check-in
@@ -30,7 +38,7 @@ export async function POST(request: Request) {
       async (tx) => {
         // 1. Find invitation that is not checked in and not revoked
         const invitation = await tx.invitation.findUnique({
-          where: { id: payload.invId },
+          where: { id: invId },
           include: {
             registration: {
               include: {
@@ -43,6 +51,10 @@ export async function POST(request: Request) {
 
         if (!invitation) {
           throw new Error('INVITATION_NOT_FOUND')
+        }
+
+        if (invitation.eventId !== eventId) {
+          throw new Error('WRONG_EVENT')
         }
 
         if (invitation.status === 'checked_in') {
@@ -113,6 +125,7 @@ export async function POST(request: Request) {
     if (message === 'INVITATION_NOT_FOUND') return errorResponse('Invitation not found', 404)
     if (message === 'ALREADY_CHECKED_IN') return errorResponse('Guest already checked in', 409)
     if (message === 'INVITATION_REVOKED') return errorResponse('Invitation has been revoked', 403)
+    if (message === 'WRONG_EVENT') return errorResponse('Ticket does not belong to this event', 400)
 
     return errorResponse(message === 'Failed to process check-in' ? message : 'Check-in failed', 500)
   }
